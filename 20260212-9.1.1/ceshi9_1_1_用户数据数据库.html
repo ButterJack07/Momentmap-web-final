@@ -1,0 +1,4732 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>此刻地图 Ceshi 9.1.1</title>
+    <style>
+
+        /* ==================== 长按反馈效果 ==================== */
+        @keyframes longPressPulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .marker-pressing {
+            animation: longPressPulse 0.5s infinite;
+        }
+
+        /* 长按提示 */
+        .long-press-hint {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 10000;
+            pointer-events: none;
+            white-space: nowrap;
+            animation: fadeIn 0.3s;
+        }
+
+        /* ==================== 私聊按钮动画效果 ==================== */
+        @keyframes chatButtonPulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 107, 107, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0); }
+        }
+
+        .chat-button-pulse {
+            animation: chatButtonPulse 2s infinite;
+        }
+
+        @keyframes chatButtonShake {
+            0% { transform: translateY(0) rotate(0deg); }
+            25% { transform: translateY(-2px) rotate(-5deg); }
+            50% { transform: translateY(-2px) rotate(5deg); }
+            75% { transform: translateY(-2px) rotate(-5deg); }
+            100% { transform: translateY(0) rotate(0deg); }
+        }
+
+        .chat-button-shake {
+            animation: chatButtonShake 0.5s ease-in-out;
+        }
+
+
+
+        /* ==================== 全局样式 ==================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+            background: #021024;
+            color: white;
+            touch-action: pan-x pan-y;
+        }
+
+        /* ==================== 登录注册界面样式 ==================== */
+        .auth-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .auth-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.4s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .auth-header h1 {
+            color: #667eea;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .auth-header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 30px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            padding: 5px;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            color: #666;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .auth-tab.active {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .auth-form {
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #333;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            color: #333;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group input::placeholder {
+            color: #999;
+        }
+
+        .form-hint {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .form-error {
+            font-size: 12px;
+            color: #ff4757;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .form-error.show {
+            display: block;
+        }
+
+        .auth-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .auth-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .auth-btn:active {
+            transform: translateY(0);
+        }
+
+        .auth-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .auth-footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .auth-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .auth-link:hover {
+            text-decoration: underline;
+        }
+
+        .status-message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            text-align: center;
+            display: none;
+        }
+
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        /* ==================== 顶部状态栏 ==================== */
+        .status-bar {
+            background: linear-gradient(135deg, #5483B3 0%, #052659 100%);
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 1000;
+        }
+
+        .status-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-info span {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        #userNickname {
+            font-weight: bold;
+        }
+
+        #userId {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .connection-status {
+            padding: 5px 12px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            font-size: 12px;
+        }
+
+        /* 位置状态 */
+        .location-status {
+            padding: 5px 12px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .location-status:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* 右侧面板控制按钮 */
+        .panel-toggle-btn {
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            border-radius: 15px;
+            color: white;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .panel-toggle-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* ==================== 主容器 ==================== */
+        .container {
+            display: flex;
+            height: calc(100vh - 30px);  /* ⭐ 减去顶部60px和底部60px */
+            overflow: hidden;
+        }
+
+        /* ==================== 左侧：地图区域 ==================== */
+        .map-container {
+            flex: 1;
+            position: relative;
+            min-width: 0;
+            transition: all 0.3s ease;
+        }
+
+        .map-container.full-width {
+            flex: 1;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            background: #0a1929;
+        }
+
+        .map-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: row;
+            gap: 12px;
+            z-index: 1000;
+            padding: 0; /* 移除内边距 */
+            background: transparent; /* 完全透明 */
+            border-radius: 0; /* 移除圆角 */
+            backdrop-filter: none; /* 移除毛玻璃效果 */
+            box-shadow: none; /* 移除阴影 */
+            border: none; /* 移除边框 */
+            flex-wrap: wrap;
+            max-width: calc(100% - 40px);
+        }
+        .map-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(245, 245, 245, 0.95) 100%);
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #052659;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .map-btn:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .map-btn:active {
+            transform: translateY(-1px) scale(0.98);
+        }
+
+
+        /* 按钮文字提示 */
+        .map-btn::after {
+            content: attr(title);
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(10px);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            z-index: 1001;
+        }
+
+        .map-btn:hover::after {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* 特定按钮样式 */
+        .map-btn:nth-child(1) { /* 登录测试用户 */
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .map-btn:nth-child(2) { /* 清除所有气泡 */
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .map-btn:nth-child(3) { /* GPS定位 */
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .map-btn:nth-child(4) { /* 手动选择位置 */
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: white;
+        }
+
+        /* 激活状态 */
+        .map-btn.active {
+            transform: scale(1.1);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 3px rgba(255, 255, 255, 0.3);
+        }
+
+
+        /* 位置模式按钮组 */
+        .location-mode {
+            display: flex;
+            flex-direction: row;
+            gap: 12px;
+            width: 100%;
+            justify-content: center;
+            margin-top: 8px;
+        }
+
+        .location-mode-btn {
+            flex: 1;
+            min-width: 0;
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            color: white;
+            font-size: 13px;
+            transition: all 0.3s ease;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .location-mode-btn.active {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
+        }
+
+        .location-mode-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        /* ==================== 右侧：控制面板 ==================== */
+        .control-panel {
+            flex: 0 0 400px;
+            background: rgba(255, 255, 255, 0.98);
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid rgba(84, 131, 179, 0.2);
+            transition: all 0.3s ease;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-panel.collapsed {
+            flex: 0 0 0;
+            min-width: 0;
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        /* ==================== 在线用户列表 ==================== */
+
+
+        .user-item {
+            padding: 10px 15px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            margin-bottom: 8px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-left: 4px solid #5483B3;
+            transition: all 0.3s ease;
+        }
+
+        .user-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        /* ==================== 气泡列表 ==================== */
+        .bubbles-list {
+            flex: 1;
+            padding: 20px;
+            border-bottom: 1px solid rgba(84, 131, 179, 0.2);
+            overflow-y: auto;
+            background: white;
+        }
+
+        .bubbles-list h3 {
+            color: #052659;
+            margin-bottom: 15px;
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .bubble-item {
+            padding: 15px;
+            background: linear-gradient(135deg, #f0f7ff 0%, #e6f0ff 100%);
+            margin-bottom: 12px;
+            border-radius: 12px;
+            border-left: 4px solid #5483B3;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .bubble-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 15px rgba(84, 131, 179, 0.15);
+        }
+
+        .bubble-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .bubble-type {
+            font-size: 11px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* ==================== 发布气泡表单 ==================== */
+        .publish-form {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid rgba(84, 131, 179, 0.2);
+        }
+
+        .publish-form h3 {
+            color: #052659;
+            margin-bottom: 15px;
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .bubble-types {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .bubble-type-btn {
+            padding: 8px 16px;
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            color: #052659;
+        }
+
+        .bubble-type-btn.selected {
+            background: linear-gradient(135deg, #5483B3 0%, #052659 100%);
+            color: white;
+            border-color: #5483B3;
+            box-shadow: 0 4px 12px rgba(84, 131, 179, 0.3);
+        }
+
+        .publish-form input,
+        .publish-form textarea {
+            width: 100%;
+            padding: 12px 15px;
+            margin-bottom: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            outline: none;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        .publish-form input:focus,
+        .publish-form textarea:focus {
+            border-color: #5483B3;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(84, 131, 179, 0.1);
+        }
+
+        .publish-form textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .publish-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #5483B3 0%, #052659 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .publish-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(84, 131, 179, 0.4);
+        }
+
+
+        /* ==================== 底部居中：公屏聊天面板 ==================== */
+        .chat-panel {
+        position: fixed;
+        left: 50%;
+        bottom: 80px;
+        transform: translateX(-50%);
+        width: 90%;
+        max-width: 600px;
+        max-height: 60vh;
+        background: rgba(255, 255, 255, 0.98);
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        z-index: 2100;
+        display: none;
+        flex-direction: column;
+        overflow: hidden;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(84, 131, 179, 0.2);
+    }
+
+
+
+
+        .chat-header {
+            padding: 15px;
+            background: linear-gradient(135deg, #5483B3 0%, #052659 100%);
+            color: white;
+            font-weight: 600;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-messages {
+            flex: 1;
+            max-height: 200px;
+            padding: 15px;
+            overflow-y: auto;
+            background: white;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .chat-message {
+            margin-bottom: 12px;
+            padding: 10px 15px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            font-size: 13px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .chat-message .sender {
+            font-weight: 600;
+            color: #5483B3;
+            margin-bottom: 5px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .chat-message .time {
+            font-size: 11px;
+            color: #6c757d;
+            text-align: right;
+            margin-top: 4px;
+        }
+
+        .chat-message.my-message {
+            background: linear-gradient(135deg, #e6f0ff 0%, #c1e8ff 100%);
+            border-left: 4px solid #5483B3;
+        }
+
+        .chat-input-area {
+            padding: 15px;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            gap: 10px;
+            background: white;
+        }
+
+        .chat-input-area input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            outline: none;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        .chat-input-area input:focus {
+            border-color: #5483B3;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(84, 131, 179, 0.1);
+        }
+
+        .chat-input-area button {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #5483B3 0%, #052659 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .chat-input-area button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(84, 131, 179, 0.3);
+        }
+
+        /* ==================== 聊天切换按钮 ==================== */
+
+
+     
+        .chat-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ff4444;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        /* ==================== 气泡颜色定义 ==================== */
+        .bubble-recommend { background: linear-gradient(135deg, #FF4444 0%, #CC0000 100%); }
+        .bubble-help { background: linear-gradient(135deg, #FFD700 0%, #FFAA00 100%); color: #333; }
+        .bubble-team { background: linear-gradient(135deg, #4169E1 0%, #1E40AF 100%); }
+        .bubble-warning { background: linear-gradient(135deg, #9932CC 0%, #6B21A8 100%); }
+        .bubble-news { background: linear-gradient(135deg, #FF69B4 0%, #DB2777 100%); }
+
+        /* ==================== 网络状态提示 ==================== */
+        .network-status {
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            z-index: 10000;
+            font-size: 14px;
+            display: none;
+            backdrop-filter: blur(10px);
+            max-width: 80%;
+            text-align: center;
+        }
+
+        .network-status.show {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* ==================== 位置选择弹窗 ==================== */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            color: #052659;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #052659;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #6c757d;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .modal-close:hover {
+            background: #f8f9fa;
+            color: #052659;
+        }
+
+        .location-search {
+            margin-bottom: 20px;
+        }
+
+        .location-search input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 14px;
+            background: #f8f9fa;
+            margin-bottom: 10px;
+        }
+
+        .location-search input:focus {
+            border-color: #5483B3;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(84, 131, 179, 0.1);
+            outline: none;
+        }
+
+        .location-suggestions {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            background: white;
+        }
+
+        .suggestion-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #f8f9fa;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .suggestion-item:hover {
+            background: #f8f9fa;
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-name {
+            font-weight: 600;
+            color: #052659;
+            font-size: 14px;
+            margin-bottom: 3px;
+        }
+
+        .suggestion-address {
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .confirm-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #5483B3 0%, #052659 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            margin-top: 15px;
+        }
+
+        .confirm-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(84, 131, 179, 0.4);
+        }
+
+        /* ==================== 用户范围圆圈 ==================== */
+        .user-range-circle {
+            fillColor: rgba(52, 152, 219, 0.3);
+            strokeColor: rgba(52, 152, 219, 0.6);
+            strokeWeight: 2;
+        }
+
+        /* ==================== 私聊提示框 ==================== */
+        .pmHint {
+            background: #5483B3;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            text-align: center;
+        }
+
+        .pmHint:hover {
+            background: #4169E1;
+        }
+
+        /* ==================== 滚动条美化 ==================== */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #5483B3 0%, #052659 100%);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #4169E1 0%, #1E3A8A 100%);
+        }
+
+        /* ==================== 手机端适配 ==================== */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                height: calc(100vh - 60px);  /* ⭐ 减去顶部60px和底部60px */
+            }
+
+            
+            .control-panel {
+                flex: 0 0 auto;
+                max-height: 40vh;
+                overflow-y: auto;
+                min-width: 100%;
+            }
+            
+            .control-panel.collapsed {
+                max-height: 0;
+                min-height: 0;
+            }
+            
+
+
+            .map-controls {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: center;
+                padding: 10px;
+                border-radius: 30px;
+                max-width: calc(100% - 20px);
+                gap: 10px;
+            }
+            
+            .map-btn {
+                width: 44px;
+                height: 44px;
+                font-size: 18px;
+            }
+            
+            .map-btn::after {
+                font-size: 11px;
+                padding: 4px 8px;
+                bottom: -28px;
+            }
+            
+            .location-mode {
+                flex-direction: column;
+                gap: 8px;
+                margin-top: 10px;
+            }
+            
+            .location-mode-btn {
+                padding: 8px 12px;
+                font-size: 12px;
+                width: 100%;
+            }
+            
+            /* 调整地图容器高度 */
+            .map-container {
+                height: 60vh;
+            }
+
+
+
+
+
+        
+            
+            .chat-panel {
+                width: 95%;
+                max-height: 50vh;
+                bottom: 10px;
+            }
+            
+            .chat-messages {
+                max-height: 150px;
+            }
+            
+
+            .status-left {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+            
+            .user-info {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 2px;
+            }
+            
+            .panel-toggle-btn {
+                position: absolute;
+                top: 50%;
+                right: 10px;
+                transform: translateY(-50%);
+            }
+            
+            .status-bar {
+                padding: 10px;
+            }
+            
+            .publish-form {
+                padding: 15px;
+            }
+            
+            .bubble-types {
+                gap: 5px;
+            }
+            
+            .bubble-type-btn {
+                padding: 6px 12px;
+                font-size: 11px;
+            }
+            
+            .network-status {
+                top: 60px;
+                padding: 8px 15px;
+                font-size: 13px;
+            }
+            
+            .location-status {
+                display: none;
+            }
+        }
+
+        /* 小屏幕手机适配 */
+        @media (max-width: 480px) {
+            .map-controls {
+                gap: 8px;
+                padding: 8px;
+            }
+            
+            .map-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 16px;
+            }
+            
+            .map-btn::after {
+                font-size: 10px;
+                padding: 3px 6px;
+                bottom: -26px;
+            }
+            
+            .location-mode-btn {
+                font-size: 11px;
+                padding: 6px 10px;
+            }
+        }
+
+
+        
+        /* ==================== 平板端适配 ==================== */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .control-panel {
+                flex: 0 0 350px;
+            }
+            
+            .chat-panel {
+                width: 80%;
+                max-width: 500px;
+            }
+
+            .map-controls {
+                right: 15px;
+                top: 15px;
+                padding: 15px;
+            }
+            
+            .map-btn {
+                width: 48px;
+                height: 48px;
+                font-size: 18px;
+            }
+        }
+
+
+
+        /* ==================== 用户位置标记样式 ==================== */
+        .user-marker-me {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    
+        /* ==================== 气泡样式增强 ==================== */
+        .bubble {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: bubbleAppear 0.5s ease-out, bubbleFloat 3s ease-in-out infinite;
+            position: relative;
+        }
+        
+        .bubble:hover {
+            transform: scale(1.15);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+        }
+        
+        .bubble.active {
+            transform: scale(1.2);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        }
+        
+        .bubble-recommend {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .bubble-help {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .bubble-team {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .bubble-warning {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+        
+        .bubble-news {
+            background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+        }
+        
+        .bubble-group {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        }
+        
+        @keyframes bubbleAppear {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes bubbleFloat {
+            0%, 100% {
+                transform: translateY(0px);
+            }
+            50% {
+                transform: translateY(-8px);
+            }
+        }
+        
+        /* 气泡信息窗口 */
+        .bubble-info-window {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            min-width: 250px;
+            max-width: 350px;
+        }
+        
+        .bubble-info-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .bubble-info-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #052659;
+        }
+        
+        .bubble-info-type {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .bubble-info-content {
+            color: #495057;
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 10px 0;
+        }
+        
+        .bubble-info-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        
+        .bubble-info-author {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .bubble-info-close {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.1);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #666;
+            transition: all 0.2s;
+        }
+        
+        .bubble-info-close:hover {
+            background: rgba(0,0,0,0.2);
+            color: #000;
+        }
+
+    
+
+        /* ==================== 底部功能栏 ==================== */
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(180deg,rgba(78, 31, 135, 0.95) 0%, rgba(47, 11, 94, 0.98) 100%);
+            backdrop-filter: blur(10px);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 -2px 20px rgba(0,0,0,0.3);
+            z-index: 2000;
+        }
+
+        .bottom-btn {
+            padding: 6px 20px;
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            color: white;
+            font-size: 10px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .bottom-btn:hover {
+            background: rgba(255,255,255,0.25);
+            transform: translateY(-2px);
+        }
+
+        .bottom-btn.active {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            color: #052659;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+        }
+
+        .publish-panel {
+        position: fixed;
+        right: 20px;
+        bottom: 80px;
+        width: 350px;
+        max-height: 70vh;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        z-index: 2100;
+        display: none;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid rgba(84, 131, 179, 0.2);
+    }
+
+        .publish-panel-header {
+        padding: 15px;
+        background: linear-gradient(135deg, #5483B3 0%, #052659 100%);
+        color: white;
+        font-weight: 600;
+        font-size: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+        .publish-panel-content {
+        padding: 20px;
+        overflow-y: auto;
+        max-height: 50vh;
+    }
+
+     @media (max-width: 768px) {
+        .publish-panel {
+            width: 90%;
+            right: 5%;
+            bottom: 70px;
+            max-height: 60vh;
+        }
+        
+        .publish-panel-content {
+            padding: 15px;
+        }
+    }
+
+
+        /* 建群气泡样式 */
+        .bubble-group {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            color: #333;
+        }
+
+        /* 按钮加载动画 */
+        @keyframes buttonPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .map-btn.loading {
+            animation: buttonPulse 1.5s ease-in-out infinite;
+        }
+
+        /* 按钮点击波纹效果 */
+        .map-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255,255,255,0.3) 1%, transparent 1%);
+            transform: translate(-50%, -50%) scale(0);
+            border-radius: 50%;
+            opacity: 0;
+            transition: transform 0.5s, opacity 0.5s;
+        }
+
+        .map-btn:active::before {
+            transform: translate(-50%, -50%) scale(2);
+            opacity: 1;
+            transition: 0s;
+        }
+
+
+
+
+</style>
+</head>
+<body>
+    <!-- 登录/注册界面 -->
+    <div class="auth-overlay" id="authOverlay">
+        <div class="auth-container">
+            <div class="auth-header">
+                <h1>🗺️ 此刻地图</h1>
+                <p>记录此刻，分享此地</p>
+            </div>
+
+            <!-- 登录/注册切换标签 -->
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="switchAuthMode('login')">登录</button>
+                <button class="auth-tab" onclick="switchAuthMode('register')">注册</button>
+            </div>
+
+            <!-- 状态消息 -->
+            <div class="status-message" id="statusMessage"></div>
+
+            <!-- 登录表单 -->
+            <div class="auth-form active" id="loginForm">
+                <div class="form-group">
+                    <label>ID / 手机号</label>
+                    <input type="text" id="loginId" placeholder="输入ID或手机号" autocomplete="username">
+                    <div class="form-error" id="loginIdError"></div>
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" id="loginPassword" placeholder="输入密码" autocomplete="current-password">
+                    <div class="form-error" id="loginPasswordError"></div>
+                </div>
+                <button class="auth-btn" onclick="handleLogin()">登录</button>
+                <div class="auth-footer">
+                    还没有账号？<a class="auth-link" onclick="switchAuthMode('register')">立即注册</a>
+                </div>
+            </div>
+
+            <!-- 注册表单 -->
+            <div class="auth-form" id="registerForm">
+                <div class="form-group">
+                    <label>手机号</label>
+                    <input type="tel" id="registerPhone" placeholder="11位手机号" maxlength="11" autocomplete="tel">
+                    <div class="form-hint">用于登录和账号安全</div>
+                    <div class="form-error" id="registerPhoneError"></div>
+                </div>
+                <div class="form-group">
+                    <label>用户ID</label>
+                    <input type="text" id="registerId" placeholder="3-20个字符" maxlength="20" autocomplete="username">
+                    <div class="form-hint">用于登录，创建后不可修改</div>
+                    <div class="form-error" id="registerIdError"></div>
+                </div>
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" id="registerUsername" placeholder="显示名称（可选）" maxlength="20">
+                    <div class="form-hint">不填写则默认为ID</div>
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" id="registerPassword" placeholder="至少6位" autocomplete="new-password">
+                    <div class="form-error" id="registerPasswordError"></div>
+                </div>
+                <div class="form-group">
+                    <label>确认密码</label>
+                    <input type="password" id="registerPasswordConfirm" placeholder="再次输入密码" autocomplete="new-password">
+                    <div class="form-error" id="registerPasswordConfirmError"></div>
+                </div>
+                <button class="auth-btn" onclick="handleRegister()">注册</button>
+                <div class="auth-footer">
+                    已有账号？<a class="auth-link" onclick="switchAuthMode('login')">立即登录</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 顶部状态栏 -->
+    <div class="status-bar">
+
+        <div class="status-left">
+            <div class="user-info">
+                <span id="userNickname">未登录</span>
+                <span id="userId">ID: ---</span>
+            </div>
+            <div class="connection-status">
+                <span id="connectionStatus">❌ 未连接</span>
+            </div>
+            <div class="location-status" id="locationStatus" onclick="openLocationModal()">
+                <span id="locationText">📍 定位中...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主容器 -->
+    <div class="container">
+        <!-- 左侧：地图 -->
+        <div class="map-container" id="mapContainer">
+            <div id="map"></div>
+                <!-- 地图控制按钮 -->
+                <div class="map-controls">
+                    <button class="map-btn" onclick="loginTestUser()" title="登录测试用户">
+                        👤
+                    </button>
+                    <button class="map-btn" onclick="clearAllBubbles()" title="清除所有气泡">
+                        🗑️
+                    </button>
+                    <button class="map-btn" id="gpsModeBtn" onclick="setLocationMode('gps')" title="GPS定位">
+                        📍
+                    </button>
+                    <button class="map-btn" id="manualModeBtn" onclick="setLocationMode('manual')" title="手动选择位置">
+                        🎯
+                    </button>
+                    
+                </div>
+        </div>
+
+        <!-- 右侧：控制面板 -->
+        <div class="control-panel" id="controlPanel">
+
+
+
+
+            <!-- 发布气泡表单 -->
+            <div class="publish-form">
+                <h3>发布新气泡</h3>
+                <div class="bubble-types">
+                    <button class="bubble-type-btn" data-type="recommend" onclick="selectBubbleType('recommend')">👍 推荐</button>
+                    <button class="bubble-type-btn" data-type="help" onclick="selectBubbleType('help')">🆘 求助</button>
+                    <button class="bubble-type-btn" data-type="team" onclick="selectBubbleType('team')">👥 组队</button>
+                    <button class="bubble-type-btn" data-type="group" onclick="selectBubbleType('group')">💬 建群</button>
+                    <button class="bubble-type-btn" data-type="warning" onclick="selectBubbleType('warning')">避雷</button>
+                    <button class="bubble-type-btn" data-type="news" onclick="selectBubbleType('news')">见闻</button>
+                </div>
+                <input type="text" id="bubbleTitle" placeholder="气泡标题">
+                <textarea id="bubbleContent" placeholder="气泡内容（可选）"></textarea>
+                <div style="margin-bottom: 12px; font-size: 13px; color: #052659;">
+                    发布位置: <span id="publishLocationText">📍 使用当前位置</span>
+                </div>
+                <button class="publish-btn" onclick="publishBubble()">发布气泡</button>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="chat-panel" id="chatPanel">
+        <div class="chat-header">
+            <span>💬 聊天区</span>
+            <button onclick="toggleChatPanel()" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;">×</button>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <!-- 动态生成聊天消息 -->
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="chatInput" placeholder="输入消息..." onkeydown="handleChatInputKey(event)" autocomplete="off">
+            <button onclick="sendChatMessage()">发送</button>
+        </div>
+    </div>
+
+    <!-- 位置选择弹窗 -->
+    <div class="modal" id="locationModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">📍 选择位置</div>
+                <button class="modal-close" onclick="closeLocationModal()">×</button>
+            </div>
+            <div class="location-search">
+                <input type="text" id="locationSearchInput" placeholder="搜索地点..." oninput="searchLocation()">
+                <div class="location-suggestions" id="locationSuggestions">
+                    <!-- 搜索建议 -->
+                </div>
+            </div>
+            <div style="text-align: center; margin: 20px 0;">
+                <div style="font-size: 14px; color: #6c757d; margin-bottom: 10px;">或直接在地图上点击选择位置</div>
+                <div id="selectedLocationInfo" style="padding: 15px; background: #f8f9fa; border-radius: 10px; font-size: 13px;">
+                    当前位置: 等待选择...
+                </div>
+            </div>
+            <button class="confirm-btn" onclick="confirmLocation()">确认选择</button>
+        </div>
+    </div>
+
+    <!-- 网络状态提示 -->
+    <div class="network-status" id="networkStatus"></div>
+
+    <!-- 地图API -->
+    <script src="https://map.qq.com/api/js?v=2.exp&key=OB4BZ-D4W3U-JSP5Z-4SFQE-O5CWRQ-CFB47"></script>
+    
+    <script>
+        // ==================== 全局变量 ====================
+        const WS_URL = "ws://121.199.161.5:3000";
+        let socket = null;
+        let map = null;
+        let currentUser = null;
+        let myPosition = null;
+        let selectedBubbleType = "recommend";
+        let bubbles = [];
+        let bubbleMarkers = new Map(); // 存储气泡标记
+        let currentInfoWindow = null; // 当前打开的信息窗口
+        let chatMessages = [];
+        let chatPanelVisible = false;
+        let unreadCount = 0;
+        let panelCollapsed = true;
+
+        // 位置相关变量
+        let locationMode = 'gps'; // 'gps' 或 'manual'
+        let manualPosition = null;
+        let gpsPosition = null;
+        let isLocationEnabled = false;
+        let gpsWatchId = null;
+        
+        // 用户和标记管理
+        let myMarker = null;
+        let myRangeCircle = null;
+        let userMarkers = {}; // 存储其他用户的标记 {userId: marker}
+        let userRangeCircles = {}; // 存储其他用户的范围圆圈
+        let onlineUsers = {}; // 在线用户信息 {userId: {lat, lng, nickname, range}}
+        let visibleRange = 1000; // 可见范围，单位米
+        
+        // 存储已发送的消息ID，避免回声问题
+        let sentMessageIds = new Set();
+        let currentChatroomCode = "000000";
+
+        //气泡清除
+        let clearBubblesFlag = false;
+        let clearTimeoutId = null;
+
+
+        let refreshTimer = null; // 定期刷新定时器
+        // 长按计时器
+        let longPressTimer = null;
+        let longPressDuration = 2000; // 2秒
+        let currentLongPressMarker = null;
+
+        // ==================== 登录注册相关函数 ====================
+        
+        // 切换登录/注册模式
+        function switchAuthMode(mode) {
+            const loginTab = document.querySelector('.auth-tab:nth-child(1)');
+            const registerTab = document.querySelector('.auth-tab:nth-child(2)');
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const statusMessage = document.getElementById('statusMessage');
+            
+            // 清除状态消息
+            statusMessage.className = 'status-message';
+            
+            if (mode === 'login') {
+                loginTab.classList.add('active');
+                registerTab.classList.remove('active');
+                loginForm.classList.add('active');
+                registerForm.classList.remove('active');
+            } else {
+                registerTab.classList.add('active');
+                loginTab.classList.remove('active');
+                registerForm.classList.add('active');
+                loginForm.classList.remove('active');
+            }
+        }
+
+        // 显示状态消息
+        function showAuthMessage(message, type = 'error') {
+            const statusMessage = document.getElementById('statusMessage');
+            statusMessage.textContent = message;
+            statusMessage.className = 'status-message ' + type;
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusMessage.className = 'status-message';
+                }, 3000);
+            }
+        }
+
+        // 验证手机号格式
+        function validatePhone(phone) {
+            return /^1\d{10}$/.test(phone);
+        }
+
+        // 处理注册
+        function handleRegister() {
+            const phone = document.getElementById('registerPhone').value.trim();
+            const id = document.getElementById('registerId').value.trim();
+            const username = document.getElementById('registerUsername').value.trim();
+            const password = document.getElementById('registerPassword').value;
+            const passwordConfirm = document.getElementById('registerPasswordConfirm').value;
+            
+            // 清除所有错误提示
+            document.querySelectorAll('.form-error').forEach(el => el.classList.remove('show'));
+            
+            // 验证手机号
+            if (!phone) {
+                showAuthMessage('请输入手机号', 'error');
+                return;
+            }
+            if (!validatePhone(phone)) {
+                showAuthMessage('手机号格式错误，需要11位数字', 'error');
+                return;
+            }
+            
+            // 验证ID
+            if (!id) {
+                showAuthMessage('请输入用户ID', 'error');
+                return;
+            }
+            if (id.length < 3 || id.length > 20) {
+                showAuthMessage('ID长度应为3-20个字符', 'error');
+                return;
+            }
+            
+            // 验证密码
+            if (!password) {
+                showAuthMessage('请输入密码', 'error');
+                return;
+            }
+            if (password.length < 6) {
+                showAuthMessage('密码至少需要6位', 'error');
+                return;
+            }
+            if (password !== passwordConfirm) {
+                showAuthMessage('两次密码输入不一致', 'error');
+                return;
+            }
+            
+            // 发送注册请求
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'register',
+                    phone: phone,
+                    id: id,
+                    username: username || id,
+                    password: password
+                }));
+                
+                showAuthMessage('正在注册...', 'success');
+            } else {
+                showAuthMessage('网络连接失败，请稍后重试', 'error');
+            }
+        }
+
+        // 处理登录
+        function handleLogin() {
+            const loginId = document.getElementById('loginId').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            
+            // 清除错误提示
+            document.querySelectorAll('.form-error').forEach(el => el.classList.remove('show'));
+            
+            if (!loginId) {
+                showAuthMessage('请输入ID或手机号', 'error');
+                return;
+            }
+            if (!password) {
+                showAuthMessage('请输入密码', 'error');
+                return;
+            }
+            
+            // 发送登录请求
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'authLogin',
+                    loginId: loginId,
+                    password: password
+                }));
+                
+                showAuthMessage('正在登录...', 'success');
+            } else {
+                showAuthMessage('网络连接失败，请稍后重试', 'error');
+            }
+        }
+
+        // 隐藏登录界面
+        function hideAuthOverlay() {
+            const authOverlay = document.getElementById('authOverlay');
+            authOverlay.style.display = 'none';
+        }
+
+        // 显示登录界面
+        function showAuthOverlay() {
+            const authOverlay = document.getElementById('authOverlay');
+            authOverlay.style.display = 'flex';
+        }
+
+
+
+
+
+        // ==================== 距离计算工具函数 ====================
+        function calculateDistance(lat1, lng1, lat2, lng2) {
+            // 将经纬度转换为弧度
+            const toRad = (degree) => degree * Math.PI / 180;
+            
+            const R = 6371000; // 地球半径（米）
+            const dLat = toRad(lat2 - lat1);
+            const dLng = toRad(lng2 - lng1);
+            
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * 
+                    Math.sin(dLng/2) * Math.sin(dLng/2);
+            
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c; // 返回距离（米）
+        }
+
+
+        // ==================== 可见性判断函数 ====================
+        function isUserVisible(myPos, myRange, userPos, userRange) {
+            if (!myPos || !userPos || !userPos.lat || !userPos.lng) {
+                console.log("⚠️ 位置数据不全，用户不可见");
+                return false;
+            }
+            
+            // 计算距离
+            const distance = calculateDistance(
+                myPos.lat, myPos.lng,
+                userPos.lat, userPos.lng
+            );
+            
+            // 双方互相可见的条件
+            const iCanSeeThem = distance <= myRange;
+            const theyCanSeeMe = distance <= (userRange || 1000); // 如果对方没有范围，默认1000米
+            
+            console.log(`📏 距离: ${Math.round(distance)}米 | 我的范围: ${myRange}米 | 对方范围: ${userRange || 1000}米`);
+            console.log(`👁️ 我能看到对方: ${iCanSeeThem} | 对方能看到我: ${theyCanSeeMe}`);
+            
+            // 双方互相可见时才显示
+            return iCanSeeThem && theyCanSeeMe;
+        }
+        
+        // ==================== 初始化 ====================
+        
+
+        window.onload = function() {
+            console.log("🚀 此刻地图 v9.2.1 - 用户认证系统 已加载");
+            
+            // 先初始化地图
+            initMap();
+            
+            // 初始化事件监听
+            initEventListeners();
+
+            document.getElementById('controlPanel').classList.add('collapsed');
+            document.getElementById('mapContainer').classList.add('full-width');
+            document.querySelector('.bottom-btn:nth-child(1)').classList.remove('active');
+            
+            // ⭐ 立即连接WebSocket（用于注册和登录）
+            connectWebSocket();
+            
+            // ⭐ 显示登录界面
+            showAuthOverlay();
+            
+            // 尝试获取GPS位置
+            getGPSLocation().then(() => {
+                console.log("✅ GPS位置获取完成");
+            }).catch((error) => {
+                console.error("❌ GPS位置获取失败:", error);
+            });
+            
+            // 添加欢迎消息（登录成功后显示）
+            function showWelcomeMessage() {
+                setTimeout(() => {
+                    addChatMessage({
+                        from: "系统",
+                        avatar: "🤖",
+                        text: "欢迎使用此刻地图！你可以在地图上发布气泡、查看附近动态，也可以和其他用户聊天。",
+                        time: Date.now(),
+                        isSystem: true
+                    });
+                }, 500);
+            }
+            
+            // 在登录成功后调用欢迎消息
+            window.showWelcomeMessage = showWelcomeMessage;
+
+            // 定期请求在线用户列表
+            setInterval(() => {
+                if (socket && socket.readyState === WebSocket.OPEN && currentUser) {
+                    socket.send(JSON.stringify({
+                        type: "requestOnlineUsers"
+                    }));
+                    console.log("📡 请求在线用户列表");
+                }
+            }, 5000); // 每5秒请求一次
+
+
+            setTimeout(() => {
+                startAutoRefresh();
+            }, 3000);
+        };
+
+
+// ==================== 事件监听初始化 ====================
+function initEventListeners() {
+    console.log('✅ 初始化所有事件监听器');
+    
+    // 窗口大小变化时调整布局
+    window.addEventListener('resize', handleResize);
+    
+    // 位置搜索输入框事件
+    document.getElementById('locationSearchInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            searchLocation();
+        }
+    });
+    
+    // ===== 聊天室相关事件监听 =====
+    console.log('🔍 初始化聊天室相关事件监听器');
+    
+    // 聊天室代码输入框
+    const chatroomInput = document.getElementById('chatroomCodeInput');
+    if (chatroomInput) {
+        console.log('🔍 找到聊天室代码输入框');
+        
+        chatroomInput.addEventListener('change', function() {
+            updateChatroomCode();
+        });
+        
+        chatroomInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                updateChatroomCode();
+            }
+        });
+    }
+    
+    // 聊天输入框
+    const chatInput = document.getElementById('chatInput');
+    if (chatInput) {
+        console.log('🔍 找到聊天输入框');
+        
+        chatInput.addEventListener('focus', function() {
+            updateChatInputPlaceholder();
+        });
+    }
+    
+    // 初始化聊天输入框提示
+    updateChatInputPlaceholder();
+}
+
+        // ==================== 响应式布局处理 ====================
+        function handleResize() {
+            if (window.innerWidth <= 768) {
+                // 手机端：自动调整布局
+                document.body.classList.add('mobile');
+            } else {
+                document.body.classList.remove('mobile');
+            }
+        }
+
+        // ==================== 面板收起/展开功能 ====================
+        function togglePanel() {
+            const panel = document.getElementById('controlPanel');
+            const mapContainer = document.getElementById('mapContainer');
+
+            panelCollapsed = !panelCollapsed;
+            
+            if (panelCollapsed) {
+                panel.classList.add('collapsed');
+                mapContainer.classList.add('full-width');
+                toggleBtn.textContent = '展开面板';
+            } else {
+                panel.classList.remove('collapsed');
+                mapContainer.classList.remove('full-width');
+                toggleBtn.textContent = '收起面板';
+            }
+        }
+
+        // ==================== 地图初始化 ====================
+        function initMap() {
+            // 默认位置（上海中心）
+            const defaultPosition = { lat: 31.2800, lng: 121.5000 };
+            
+            // 创建地图实例
+            map = new qq.maps.Map(document.getElementById('map'), {
+                center: new qq.maps.LatLng(defaultPosition.lat, defaultPosition.lng),
+                zoom: 15,
+                backgroundColor: '#0a1929',
+                mapStyle: {
+                    styleId: 'dark'
+                },
+                // 添加以下配置禁用控件
+                disableDefaultUI: true, // 禁用所有默认控件
+                // 或者只禁用特定的控件：
+                // mapTypeControl: false, // 禁用地图类型切换控件（包括卫星图）
+                // scaleControl: false,   // 禁用比例尺
+                // zoomControl: false,    // 禁用缩放控件
+                // panControl: false      // 禁用平移控件
+            });
+            
+            // 如果您需要保留缩放控件，可以重新启用它
+            // map.setOptions({
+            //     zoomControl: true,
+            //     zoomControlOptions: {
+            //         position: qq.maps.ControlPosition.RIGHT_CENTER
+            //     }
+            // });
+            
+            // 地图初始化完成后请求附近气泡
+            console.log("📍 地图已初始化，准备请求附近气泡");
+            setTimeout(() => {
+                requestNearbyBubbles();
+            }, 1000);
+
+            console.log("✅ 地图初始化完成");
+            
+            // 添加地图点击事件（用于手动选择位置）
+            qq.maps.event.addListener(map, 'click', function(event) {
+                if (locationMode === 'manual') {
+                    handleMapClick(event);
+                }
+            });
+        }
+        // ==================== GPS定位功能（借鉴提供的代码）====================
+        function getGPSLocation() {
+            return new Promise((resolve, reject) => {
+                if (!navigator.geolocation) {
+                    console.log('⚠️ 浏览器不支持Geolocation，使用默认位置');
+                    myPosition = { lat: 39.9042, lng: 116.4074 };
+                    showNetworkStatus('浏览器不支持定位，使用默认位置（北京天安门）', 3000);
+                    resolve(myPosition);
+                    return;
+                }
+
+                const options = {
+                    enableHighAccuracy: true,
+                    timeout: 15000,
+                    maximumAge: 0
+                };
+
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        gpsPosition = { lat: lat, lng: lng };
+                        
+                        // 如果当前是GPS模式，更新位置
+                        if (locationMode === 'gps') {
+                            updateMyPosition(gpsPosition);
+                        }
+                        
+                        console.log('✅ 获取到GPS定位:', gpsPosition);
+                        showNetworkStatus(`定位成功 (精度: ${Math.round(position.coords.accuracy)}米)`, 2000);
+                        resolve(gpsPosition);
+                        
+                        // 开始持续监控GPS位置
+                        startGPSWatching();
+                    },
+                    (error) => {
+                        console.log('⚠️ 定位失败:', error.message);
+                        
+                        let errorMessage = '定位失败，使用默认位置（北京天安门）';
+                        switch(error.code) {
+                            case error.PERMISSION_DENIED:
+                                errorMessage = '请在浏览器设置中允许位置权限，然后刷新页面';
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                errorMessage = '无法获取位置信息，使用默认位置';
+                                break;
+                            case error.TIMEOUT:
+                                errorMessage = '定位超时，使用默认位置';
+                                break;
+                        }
+                        
+                        showNetworkStatus(errorMessage, 4000);
+                        myPosition = { lat: 39.9042, lng: 116.4074 };
+                        resolve(myPosition);
+                    },
+                    options
+                );
+            });
+        }
+
+        function startGPSWatching() {
+            if (!navigator.geolocation || gpsWatchId) return;
+            
+            gpsWatchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    gpsPosition = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    };
+                    
+                    // 如果当前是GPS模式，更新位置
+                    if (locationMode === 'gps') {
+                        updateMyPosition(gpsPosition);
+                    }
+                    
+                    updateLocationStatus("📍 实时定位中");
+                },
+                (error) => {
+                    console.error("GPS监控错误:", error);
+                    updateLocationStatus("❌ 定位失败");
+                },
+                {
+                    enableHighAccuracy: true,
+                    maximumAge: 30000
+                }
+            );
+            
+            isLocationEnabled = true;
+        }
+
+        function stopGPSWatching() {
+            if (gpsWatchId && navigator.geolocation) {
+                navigator.geolocation.clearWatch(gpsWatchId);
+                gpsWatchId = null;
+            }
+            isLocationEnabled = false;
+        }
+
+        // ==================== 位置模式设置 ====================
+        function setLocationMode(mode) {
+            locationMode = mode;
+            
+            // 获取所有相关按钮
+            const gpsCircleBtn = document.getElementById('gpsModeBtn');
+            const manualCircleBtn = document.getElementById('manualModeBtn');
+            const gpsTextBtn = document.getElementById('gpsModeTextBtn');
+            const manualTextBtn = document.getElementById('manualModeTextBtn');
+            
+            // 创建按钮数组，过滤掉不存在的
+            const buttons = [gpsCircleBtn, manualCircleBtn];
+            if (gpsTextBtn) buttons.push(gpsTextBtn);
+            if (manualTextBtn) buttons.push(manualTextBtn);
+            
+            // 移除所有激活状态（只对存在的按钮操作）
+            buttons.forEach(btn => {
+                if (btn) btn.classList.remove('active');
+            });
+            
+            if (mode === 'gps') {
+                // 激活GPS模式按钮
+                if (gpsCircleBtn) gpsCircleBtn.classList.add('active');
+                if (gpsTextBtn) gpsTextBtn.classList.add('active');
+                
+                // 启用GPS定位
+                if (gpsPosition) {
+                    updateMyPosition(gpsPosition);
+                } else {
+                    getGPSLocation();
+                }
+                
+                showNetworkStatus("已切换到GPS定位模式", 2000);
+            } else {
+                // 激活手动模式按钮
+                if (manualCircleBtn) manualCircleBtn.classList.add('active');
+                if (manualTextBtn) manualTextBtn.classList.add('active');
+                
+                // 停止GPS监控
+                stopGPSWatching();
+                
+                // 提示用户点击地图选择位置
+                showNetworkStatus("请点击地图选择位置", 2000);
+            }
+            
+            updateLocationDisplay();
+        }
+
+        // ==================== 手动位置选择 ====================
+        function handleMapClick(event) {
+            if (locationMode === 'manual') {
+                manualPosition = {
+                    lat: event.latLng.getLat(),
+                    lng: event.latLng.getLng()
+                };
+                
+                updateMyPosition(manualPosition);
+                showNetworkStatus(`已选择位置: ${manualPosition.lat.toFixed(4)}, ${manualPosition.lng.toFixed(4)}`, 2000);
+                
+                // 更新位置选择弹窗中的信息
+                if (document.getElementById('locationModal').style.display === 'flex') {
+                    updateLocationModalInfo();
+                }
+            }
+        }
+
+        // ==================== 更新我的位置（核心函数）====================
+        function updateMyPosition(position) {
+            myPosition = position;
+            
+            console.log("📍 更新我的位置:", position);
+            
+            // 更新我的位置标记
+            updateMyMarker();
+            
+            // 更新我的范围圆圈
+            updateMyRange();
+            
+            // 更新地图中心（平滑移动）
+            if (map) {
+                map.panTo(new qq.maps.LatLng(position.lat, position.lng));
+            }
+            
+            // 更新发布位置显示
+            updatePublishLocationDisplay();
+            
+            // 刷新所有用户标记（包括自己）
+            refreshAllMarkers();
+            
+            // 发送位置到服务器
+            sendPositionToServer();
+        }
+
+        // ==================== 更新我的标记 ====================
+        function updateMyMarker() {
+            if (!map || !myPosition) return;
+            
+            // 移除旧的标记
+            if (myMarker) {
+                myMarker.setMap(null);
+            }
+            
+            // 创建新的标记
+            const icon = new qq.maps.MarkerImage(
+                'data:image/svg+xml;utf8,' + encodeURIComponent(`
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+                        <!-- 外圈发光效果 -->
+                        <circle cx="24" cy="24" r="22" fill="#FFAA00" 
+                                stroke="white" stroke-width="2"
+                                filter="url(#shadow)"/>
+                        
+                        <!-- 内圈 -->
+                        <circle cx="24" cy="24" r="16" fill="white" opacity="0.9"/>
+                        
+                        <!-- 用户图标 -->
+                        <text x="24" y="32" text-anchor="middle" 
+                            fill="#FFAA00" font-size="20" 
+                            font-family="Arial, sans-serif" font-weight="bold">
+                            👤
+                        </text>
+                        
+                        <!-- 小圆点（在线指示器） -->
+                        <circle cx="36" cy="12" r="4" fill="#00FF88" 
+                                stroke="white" stroke-width="1.5"/>
+                        
+                        <defs>
+                            <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                                <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+                                <feOffset dx="0" dy="0" result="offsetblur"/>
+                                <feMerge>
+                                    <feMergeNode/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                            </filter>
+                        </defs>
+                    </svg>
+                `),
+                new qq.maps.Size(48, 48),
+                new qq.maps.Point(0, 0),
+                new qq.maps.Point(24, 24)
+            );
+
+
+            myMarker = new qq.maps.Marker({
+                map: map,
+                position: new qq.maps.LatLng(myPosition.lat, myPosition.lng),
+                title: currentUser ? currentUser.nickname : '我的位置',
+                icon: icon
+            });
+            
+
+        }
+
+        // ==================== 更新我的可见范围圆圈 ====================
+        function updateMyRange() {
+            if (!map || !myPosition) return;
+            
+            // 移除旧的圆圈
+            if (myRangeCircle) {
+                myRangeCircle.setMap(null);
+            }
+            
+            // 创建新的可见范围圆圈
+            myRangeCircle = new qq.maps.Circle({
+                map: map,
+                center: new qq.maps.LatLng(myPosition.lat, myPosition.lng),
+                radius: visibleRange,
+                fillColor: new qq.maps.Color(52, 152, 219, 0.3),
+                strokeColor: new qq.maps.Color(52, 152, 219, 0.6),
+                strokeWeight: 2
+            });
+        }
+
+
+        // ==================== 刷新所有用户标记（新版）====================
+        function refreshAllMarkers() {
+            console.log("🔄 开始刷新所有用户标记");
+            
+            if (!myPosition || !map) {
+                console.log("⚠️ 无法刷新：地图或我的位置不存在");
+                return;
+            }
+            
+            const myLatLng = new qq.maps.LatLng(myPosition.lat, myPosition.lng);
+            
+            // 1. 更新我的标记位置
+            if (myMarker) {
+                myMarker.setPosition(myLatLng);
+                console.log("📍 更新我的标记位置");
+            }
+            
+            // 2. 更新我的范围圆圈位置
+            if (myRangeCircle) {
+                myRangeCircle.setCenter(myLatLng);
+                console.log("🔵 更新我的范围圆圈位置");
+            }
+            
+            // 3. 获取在线用户列表
+            const onlineUserIds = Object.keys(onlineUsers);
+            console.log(`👥 在线用户数量: ${onlineUserIds.length}`);
+            
+            // 4. 处理每个在线用户
+            onlineUserIds.forEach(userId => {
+                const user = onlineUsers[userId];
+                
+                // 跳过自己
+                if (currentUser && userId === currentUser.id) {
+                    console.log(`⏭️ 跳过自己: ${userId}`);
+                    return;
+                }
+                
+                // 检查用户是否有位置
+                if (!user || !user.lat || !user.lng) {
+                    console.log(`⚠️ 用户 ${userId} 无位置信息`);
+                    if (userMarkers[userId]) {
+                        userMarkers[userId].setMap(null);
+                    }
+                    if (userRangeCircles[userId]) {
+                        userRangeCircles[userId].setMap(null);
+                    }
+                    return;
+                }
+                
+                // 使用我们新写的函数判断是否可见
+                const isVisible = isUserVisible(
+                    myPosition, 
+                    visibleRange, 
+                    { lat: user.lat, lng: user.lng }, 
+                    user.range || 1000
+                );
+                
+                console.log(`👤 ${user.nickname} (${userId}): ${isVisible ? '✅ 可见' : '❌ 不可见'}`);
+                
+                // 如果不可见，隐藏标记和范围圆圈
+                if (!isVisible) {
+                    if (userMarkers[userId]) {
+                        userMarkers[userId].setMap(null);
+                        console.log(`   🗑️ 隐藏用户标记: ${user.nickname}`);
+                    }
+                    if (userRangeCircles[userId]) {
+                        userRangeCircles[userId].setMap(null);
+                        console.log(`   🗑️ 隐藏用户范围圆圈: ${user.nickname}`);
+                    }
+                    return;
+                }
+                
+                // 如果可见，显示标记和范围圆圈
+                const theirLatLng = new qq.maps.LatLng(user.lat, user.lng);
+                
+                // 创建或更新用户标记
+                if (!userMarkers[userId]) {
+                    console.log(`   🆕 创建新用户标记: ${user.nickname}`);
+                    
+                    const icon = new qq.maps.MarkerImage(
+                        'data:image/svg+xml;utf8,' + encodeURIComponent(`
+                            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+                                <circle cx="20" cy="20" r="18" fill="#FFAA00" stroke="white" stroke-width="2"/>
+                                <text x="20" y="28" text-anchor="middle" fill="white" font-size="18" font-family="Arial">👤</text>
+                            </svg>
+                        `),
+                        new qq.maps.Size(40, 40),
+                        new qq.maps.Point(0, 0),
+                        new qq.maps.Point(20, 20)
+                    );
+                    
+                    const marker = new qq.maps.Marker({
+                        map: map,
+                        position: theirLatLng,
+                        title: `${user.nickname} (${userId})`,
+                        icon: icon
+                    });
+                    
+                    // 添加标签
+                    // 移除标签（不要白色框框）
+                    // const label = new qq.maps.Label({
+                    //     map: map,
+                    //     position: theirLatLng,
+                    //     content: user.nickname,
+                    //     offset: new qq.maps.Size(0, -25)
+                    // });
+
+                    // marker.label = label;
+                    userMarkers[userId] = marker;
+
+
+
+                    let pressTimer = null;
+                    let currentPressedMarker = null;
+                    let isPressing = false;
+
+                    // 鼠标按下事件（桌面端）
+                    qq.maps.event.addListener(marker, 'mousedown', function() {
+                        pressTimer = setTimeout(function() {
+                            showUserInfoWindow(user, theirLatLng);
+                            isPressing = true;
+                            currentPressedMarker = marker;
+                        }, 2000); // 长按2秒
+                    });
+
+                    // 触摸开始事件（移动端）
+                    qq.maps.event.addListener(marker, 'touchstart', function(e) {
+                        // 阻止默认行为，防止页面滚动
+                        if (e && e.domEvent) {
+                            e.domEvent.preventDefault();
+                        }
+                        
+                        pressTimer = setTimeout(function() {
+                            showUserInfoWindow(user, theirLatLng);
+                            isPressing = true;
+                            currentPressedMarker = marker;
+                        }, 2000); // 长按2秒
+                    });
+
+                    // 鼠标松开事件
+                    qq.maps.event.addListener(marker, 'mouseup', function() {
+                        clearTimeout(pressTimer);
+                    });
+
+                    // 鼠标离开事件
+                    qq.maps.event.addListener(marker, 'mouseout', function() {
+                        clearTimeout(pressTimer);
+                    });
+
+                    // 触摸结束事件（移动端）
+                    qq.maps.event.addListener(marker, 'touchend', function(e) {
+                        // 阻止默认行为
+                        if (e && e.domEvent) {
+                            e.domEvent.preventDefault();
+                        }
+                        clearTimeout(pressTimer);
+                    });
+
+                    // 触摸取消事件（移动端）
+                    qq.maps.event.addListener(marker, 'touchcancel', function() {
+                        clearTimeout(pressTimer);
+                    });
+
+                    // 点击标记事件（点击时关闭信息窗口）
+                    qq.maps.event.addListener(marker, 'click', function() {
+                        hideUserInfoWindow();
+                    });
+
+                    // 添加全局事件监听，防止长按时地图移动
+                    function addGlobalEventListeners() {
+                        // 阻止地图在长按时移动
+                        qq.maps.event.addListener(map, 'mousedown', function() {
+                            isPressing = true;
+                        });
+                        
+                        qq.maps.event.addListener(map, 'mouseup', function() {
+                            isPressing = false;
+                        });
+                        
+                        qq.maps.event.addListener(map, 'touchstart', function(e) {
+                            isPressing = true;
+                        });
+                        
+                        qq.maps.event.addListener(map, 'touchend', function(e) {
+                            isPressing = false;
+                        });
+                    }
+
+                    // 在页面加载时调用
+                    setTimeout(addGlobalEventListeners, 1000);              
+
+
+
+                    
+                } else {
+                    // 更新现有标记位置
+                    userMarkers[userId].setPosition(theirLatLng);
+                    if (userMarkers[userId].label) {
+                        userMarkers[userId].label.setPosition(theirLatLng);
+                    }
+                    userMarkers[userId].setMap(map);
+                    console.log(`   🔄 更新用户标记位置: ${user.nickname}`);
+                }
+                
+                // 创建或更新用户范围圆圈
+                if (!userRangeCircles[userId]) {
+                    console.log(`   🆕 创建用户范围圆圈: ${user.nickname} (${user.range || 1000}米)`);
+                    
+                    userRangeCircles[userId] = new qq.maps.Circle({
+                        map: map,
+                        center: theirLatLng,
+                        radius: user.range || 1000,
+                        fillColor: new qq.maps.Color(255, 170, 0, 0.2),
+                        strokeColor: new qq.maps.Color(255, 170, 0, 0.5),
+                        strokeWeight: 1
+                    });
+                } else {
+                    userRangeCircles[userId].setCenter(theirLatLng);
+                    userRangeCircles[userId].setRadius(user.range || 1000);
+                    userRangeCircles[userId].setMap(map);
+                    console.log(`   🔄 更新用户范围圆圈: ${user.nickname}`);
+                }
+            });
+            
+            console.log("✅ 刷新所有用户标记完成");
+        }
+
+
+        // ==================== 用户标记悬停功能 ====================
+        let currentUserInfoWindow = null;
+
+        function showUserInfoWindow(user, position) {
+            // 移除现有的信息窗口
+            if (currentUserInfoWindow) {
+                currentUserInfoWindow.close();
+            }
+
+            showNetworkStatus(`👆 长按成功 - 信息窗口将在10秒后自动关闭，或点击地图关闭`, 2000);
+            
+            // 创建药丸形态的信息窗口内容（无背景框）
+            const content = `
+                <div style="
+                    background: transparent;
+                    padding: 8px 12px 8px 8px;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+                    font-size: 12px;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    pointer-events: auto;
+                ">
+                    <!-- 左侧：用户头像圆 -->
+                    <div style="
+                        width: 32px;
+                        height: 32px;
+                        border-radius: 50%;
+                        background: linear-gradient(135deg, #5483B3 0%, #052659 100%);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        font-size: 16px;
+                        flex-shrink: 0;
+                        border: 2px solid white;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                    ">
+                        ${user.avatar || '👤'}
+                    </div>
+                    
+                    <!-- 中间：用户信息（药丸背景） -->
+                    <div style="
+                        flex: 1;
+                        min-width: 0;
+                        overflow: hidden;
+                        background: linear-gradient(135deg, rgba(248, 249, 250, 0.95) 0%, rgba(233, 236, 239, 0.95) 100%);
+                        backdrop-filter: blur(10px);
+                        border-radius: 50px;
+                        padding: 6px 15px 6px 12px;
+                        border: 2px solid rgba(84, 131, 179, 0.8);
+                        box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+                    ">
+                        <div style="
+                            font-weight: 600;
+                            color: #052659;
+                            font-size: 11px;
+                            white-space: nowrap;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                            margin-bottom: 1px;
+                        ">
+                            ${user.nickname}
+                        </div>
+                        <div style="
+                            font-size: 9px;
+                            color: #6c757d;
+                            font-family: 'Courier New', monospace;
+                            white-space: nowrap;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                        ">
+                            ${user.userId ? 'ID: ' + user.userId.substring(0, 8) + '...' : 'ID: 未知'}
+                        </div>
+                    </div>
+                    
+                    <!-- 右侧：私聊按钮圆 -->
+                    <button onclick="openPrivateChat('${user.userId}', '${user.nickname}')" 
+                            style="
+                                width: 36px;
+                                height: 36px;
+                                border-radius: 50%;
+                                background: linear-gradient(135deg, #FF6B6B 0%, #FF4757 100%);
+                                color: white;
+                                border: 2px solid white;
+                                cursor: pointer;
+                                font-size: 16px;
+                                font-weight: bold;
+                                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                flex-shrink: 0;
+                                box-shadow: 0 3px 12px rgba(255, 107, 107, 0.5);
+                                position: relative;
+                                overflow: hidden;
+                                z-index: 10;
+                            "
+                            onmouseover="
+                                this.style.transform='translateY(-2px) scale(1.1)';
+                                this.style.boxShadow='0 5px 18px rgba(255, 107, 107, 0.8)';
+                            "
+                            onmouseout="
+                                this.style.transform='translateY(0) scale(1)';
+                                this.style.boxShadow='0 3px 12px rgba(255, 107, 107, 0.5)';
+                            "
+                            title="私聊 ${user.nickname}"
+                    >
+                        💬
+                        <!-- 脉冲动画效果 -->
+                        <span style="
+                            position: absolute;
+                            width: 100%;
+                            height: 100%;
+                            border-radius: 50%;
+                            background: rgba(255, 255, 255, 0.3);
+                            animation: pulse 2s infinite;
+                            pointer-events: none;
+                        "></span>
+                    </button>
+                </div>
+            `;
+            
+            // 创建信息窗口（下移更多）
+            currentUserInfoWindow = new qq.maps.InfoWindow({
+                map: map,
+                position: position,
+                content: content,
+                offset: new qq.maps.Size(0, -80) // 下移更多，在标记下方显示
+            });
+            
+            currentUserInfoWindow.open();
+            
+            console.log(`👤 显示用户信息: ${user.nickname}`);
+            
+            // 10秒后自动关闭
+            setTimeout(() => {
+                hideUserInfoWindow();
+            }, 10000);
+
+
+            currentUserInfoWindow.open();
+    
+            console.log(`👤 显示用户信息: ${user.nickname}`);
+            
+            // 10秒后自动关闭
+            setTimeout(() => {
+                hideUserInfoWindow();
+            }, 10000); // 10秒后自动关闭
+            
+            // 添加点击地图关闭功能
+            qq.maps.event.addListenerOnce(map, 'click', function() {
+                hideUserInfoWindow();
+            });
+            
+            // 添加地图拖动关闭功能
+            qq.maps.event.addListenerOnce(map, 'dragstart', function() {
+                hideUserInfoWindow();
+            });
+
+        }
+
+        function hideUserInfoWindow() {
+            if (currentUserInfoWindow) {
+                currentUserInfoWindow.close();
+                currentUserInfoWindow = null;
+            }
+        }
+
+
+        // ==================== 定期刷新函数 ====================
+        function startAutoRefresh() {
+            console.log("🔄 启动自动刷新定时器（每5秒刷新一次）");
+            
+            // 如果已有定时器，先清除
+            if (refreshTimer) {
+                clearInterval(refreshTimer);
+            }
+            
+            // 创建新的定时器，每5秒刷新一次
+            refreshTimer = setInterval(() => {
+                console.log("⏰ 定时刷新触发");
+                
+                // 如果清除模式中，不请求气泡
+                if (clearBubblesFlag) {
+                    console.log("⏸️ 清除模式中，跳过气泡请求");
+                    return;
+                }
+
+
+                // 如果已登录且有地图，就刷新标记
+                if (currentUser && map) {
+                    // 1. 先请求在线用户列表
+                    if (socket && socket.readyState === WebSocket.OPEN) {
+                        socket.send(JSON.stringify({
+                            type: "requestOnlineUsers"
+                        }));
+                        console.log("📡 定时请求在线用户列表");
+                    }
+                    
+                    // 2. 刷新标记（即使位置不变也刷新）
+                    refreshAllMarkers();
+                    
+                    // 3. 请求附近气泡
+                    requestNearbyBubbles();
+                } else {
+                    console.log("⏸️ 定时刷新暂停：用户未登录或地图未初始化");
+                }
+            }, 5000); // 每5秒执行一次
+            
+            console.log("✅ 自动刷新定时器已启动");
+        }
+
+        function stopAutoRefresh() {
+            if (refreshTimer) {
+                clearInterval(refreshTimer);
+                refreshTimer = null;
+                console.log("🛑 自动刷新定时器已停止");
+            }
+        }
+
+
+        // ==================== 显示私聊提示（借鉴提供的代码）====================
+        function showPrivateChatHint(userId, nickname, position) {
+            // 简化为直接使用新的悬停功能
+            // 这个函数现在由 showUserInfoWindow 替代
+            console.log(`📢 提示: 点击用户标记可查看 ${nickname} 的详细信息`);
+        }
+
+
+        function openPrivateChat(userId, nickname) {
+            // 关闭信息窗口
+            hideUserInfoWindow();
+            
+            // 显示通知
+            showNetworkStatus(`💬 准备与 ${nickname} 私聊...`, 2000);
+            
+            // 暂时先显示系统消息
+            addChatMessage({
+                from: "系统",
+                avatar: "🤖",
+                text: `已为您连接到 ${nickname} 的私聊，请输入消息...`,
+                time: Date.now(),
+                isSystem: true
+            });
+            
+            // 打开聊天面板
+            if (!chatPanelVisible) {
+                toggleChatPanel();
+            }
+            
+            // 在输入框中添加私聊标记
+            const chatInput = document.getElementById('chatInput');
+            chatInput.value = `[私聊 ${nickname}] `;
+            chatInput.focus();
+            
+            console.log(`💬 打开私聊: ${nickname} (${userId})`);
+        }
+
+        // ==================== 位置弹窗功能 ====================
+        function openLocationModal() {
+            document.getElementById('locationModal').style.display = 'flex';
+            document.getElementById('locationSearchInput').focus();
+        }
+
+        function closeLocationModal() {
+            document.getElementById('locationModal').style.display = 'none';
+            document.getElementById('locationSearchInput').value = '';
+            document.getElementById('locationSuggestions').innerHTML = '';
+        }
+
+        function searchLocation() {
+            const input = document.getElementById('locationSearchInput').value.trim();
+            const suggestionsDiv = document.getElementById('locationSuggestions');
+            
+            if (!input) {
+                suggestionsDiv.innerHTML = '<div class="suggestion-item"><div class="suggestion-name">请输入搜索关键词</div></div>';
+                return;
+            }
+            
+            // 使用腾讯地图搜索API
+            const search = new qq.maps.Search({
+                complete: function(results) {
+                    suggestionsDiv.innerHTML = '';
+                    
+                    if (results.detail && results.detail.pois && results.detail.pois.length > 0) {
+                        results.detail.pois.slice(0, 5).forEach(poi => {
+                            const item = document.createElement('div');
+                            item.className = 'suggestion-item';
+                            item.innerHTML = `
+                                <div class="suggestion-name">${poi.name}</div>
+                                <div class="suggestion-address">${poi.address || '无地址信息'}</div>
+                            `;
+                            item.onclick = () => selectLocationFromSearch(poi);
+                            suggestionsDiv.appendChild(item);
+                        });
+                    } else {
+                        suggestionsDiv.innerHTML = '<div class="suggestion-item"><div class="suggestion-name">未找到相关地点</div></div>';
+                    }
+                }
+            });
+            
+            search.search(input);
+        }
+
+        function selectLocationFromSearch(poi) {
+            manualPosition = {
+                lat: poi.latLng.lat,
+                lng: poi.latLng.lng
+            };
+            
+            // 切换到手动模式
+            setLocationMode('manual');
+            
+            // 更新位置
+            updateMyPosition(manualPosition);
+            
+            // 更新弹窗信息
+            updateLocationModalInfo();
+            
+            // 将地图中心移动到选择的位置
+            if (map) {
+                map.panTo(new qq.maps.LatLng(manualPosition.lat, manualPosition.lng));
+            }
+            
+            document.getElementById('locationSearchInput').value = poi.name;
+            document.getElementById('locationSuggestions').innerHTML = '';
+            
+            showNetworkStatus(`已选择: ${poi.name}`, 2000);
+        }
+
+        function updateLocationModalInfo() {
+            const infoDiv = document.getElementById('selectedLocationInfo');
+            const modeText = locationMode === 'gps' ? 'GPS定位' : '手动选择';
+            const posText = manualPosition || myPosition;
+            
+            infoDiv.innerHTML = `
+                <div><strong>模式:</strong> ${modeText}</div>
+                <div><strong>位置:</strong> ${posText.lat.toFixed(6)}, ${posText.lng.toFixed(6)}</div>
+                <div><strong>状态:</strong> ${isLocationEnabled ? '实时更新中' : '手动位置'}</div>
+            `;
+        }
+
+        function confirmLocation() {
+            closeLocationModal();
+            showNetworkStatus("位置已确认", 2000);
+        }
+
+        // ==================== 位置状态更新 ====================
+        function updateLocationStatus(text) {
+            const element = document.getElementById('locationText');
+            if (element) element.textContent = text;
+        }
+
+        function updatePublishLocationDisplay() {
+            const element = document.getElementById('publishLocationText');
+            if (element) {
+                const modeText = locationMode === 'gps' ? 'GPS定位' : '手动选择';
+                element.textContent = `📍 ${modeText} (${myPosition.lat.toFixed(4)}, ${myPosition.lng.toFixed(4)})`;
+            }
+        }
+
+        function updateLocationDisplay() {
+            updateLocationStatus(locationMode === 'gps' ? '📍 GPS定位中' : '🎯 手动选择');
+            updatePublishLocationDisplay();
+        }
+
+        // ==================== WebSocket 连接 ====================
+        function connectWebSocket() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                console.log("✅ WebSocket 已连接");
+                return;
+            }
+
+            console.log("🔌 连接服务器:", WS_URL);
+            showNetworkStatus("正在连接服务器...", 0);
+            
+            try {
+                socket = new WebSocket(WS_URL);
+            } catch (error) {
+                console.error("❌ 创建WebSocket失败:", error);
+                updateConnectionStatus("❌ 连接失败");
+                showNetworkStatus("连接失败，请检查网络", 3000);
+                return;
+            }
+
+            socket.onopen = () => {
+                console.log("✅ WebSocket 连接成功");
+                updateConnectionStatus("✅ 已连接");
+                showNetworkStatus("已连接到服务器", 2000);
+                
+                // ⭐ 只在已登录的情况下发送位置信息
+                if (currentUser && currentUser.id) {
+                    sendLogin();
+                    // 发送当前位置
+                    sendPositionToServer();
+                }
+            };
+
+            socket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleServerMessage(data);
+                } catch (error) {
+                    console.error("❌ 消息解析失败:", error);
+                }
+            };
+
+            socket.onclose = () => {
+                console.log("📡 连接已关闭");
+                updateConnectionStatus("❌ 连接断开");
+                showNetworkStatus("与服务器断开连接", 2000);
+                
+                // 3秒后重连
+                setTimeout(() => {
+                    if (currentUser) {
+                        connectWebSocket();
+                    }
+                }, 3000);
+            };
+
+            socket.onerror = (error) => {
+                console.error("❌ WebSocket错误:", error);
+                updateConnectionStatus("❌ 连接错误");
+                showNetworkStatus("连接错误，请稍后重试", 2000);
+            };
+        }
+
+        function updateConnectionStatus(status) {
+            const element = document.getElementById('connectionStatus');
+            if (element) element.textContent = status;
+        }
+
+
+        function sendLogin() {
+            if (!socket || socket.readyState !== WebSocket.OPEN || !currentUser) return;
+
+            // 确保有位置信息
+            if (!myPosition) {
+                myPosition = { lat: 31.28, lng: 121.50 }; // 默认上海位置
+            }
+            
+            // 确保有范围信息
+            if (!visibleRange) {
+                visibleRange = 1000; // 默认1000米
+            }
+            
+            socket.send(JSON.stringify({
+                type: "login",
+                userId: currentUser.id,
+                nickname: currentUser.nickname,
+                avatar: currentUser.avatar,
+                lat: myPosition.lat,
+                lng: myPosition.lng,
+                range: visibleRange  // ✅ 重要：发送我的可见范围
+            }));
+            
+            console.log("📤 发送登录信息:", currentUser.nickname, "范围:", visibleRange + "米");
+        }
+        
+        function sendPositionToServer() {
+            if (!socket || socket.readyState !== WebSocket.OPEN || !currentUser) return;
+            
+            // 确保有位置信息
+            if (!myPosition) {
+                console.log("⚠️ 无位置信息，使用默认位置");
+                myPosition = { lat: 31.28, lng: 121.50 };
+            }
+            
+            socket.send(JSON.stringify({
+                type: "position",
+                lat: myPosition.lat,
+                lng: myPosition.lng,
+                userId: currentUser.id,
+                nickname: currentUser.nickname,
+                range: visibleRange  // ✅ 重要：发送我的可见范围
+            }));
+            
+            console.log("📍 发送位置信息:", myPosition, "范围:", visibleRange + "米");
+        }
+
+
+        function requestNearbyBubbles() {
+            if (!socket || socket.readyState !== WebSocket.OPEN) {
+                console.error("❌ WebSocket 未连接");
+                return;
+            }
+            
+            if (!myPosition) {
+                console.error("❌ 无位置信息");
+                return;
+            }
+            
+            // 请求附近气泡
+            socket.send(JSON.stringify({
+                type: "getNearbyBubbles"
+            }));
+            
+            console.log("📡 请求附近气泡");
+        }
+
+        // ==================== 消息处理 ====================
+        function handleServerMessage(data) {
+            console.log("📨 收到服务器消息:", data.type, data);
+
+            switch (data.type) {
+                case "registerResponse":
+                    // 处理注册响应
+                    if (data.success) {
+                        showAuthMessage(data.message || '注册成功！', 'success');
+                        setTimeout(() => {
+                            switchAuthMode('login');
+                            // 自动填充登录信息
+                            document.getElementById('loginId').value = data.user.id;
+                        }, 1500);
+                    } else {
+                        showAuthMessage(data.message || '注册失败', 'error');
+                    }
+                    break;
+                    
+                case "loginSuccess":
+                    // 认证登录成功
+                    if (data.message) {
+                        showAuthMessage(data.message, 'success');
+                    }
+                    // 设置当前用户
+                    currentUser = {
+                        id: data.user.id,
+                        nickname: data.user.nickname,
+                        phone: data.user.phone,
+                        avatar: data.user.avatar
+                    };
+                    
+                    // 隐藏登录界面
+                    setTimeout(() => {
+                        hideAuthOverlay();
+                        handleLoginSuccess(data.user);
+                    }, 1000);
+                    break;
+                    
+                case "loginFailed":
+                    // 登录失败
+                    showAuthMessage(data.message || '登录失败', 'error');
+                    break;
+                    
+                case "onlineCount":
+                    updateOnlineCount(data.count);
+                    break;
+                    
+                case "newBubble":
+                    console.log("🎈 收到新气泡广播:", data.bubble);
+                    addBubble(data.bubble);
+                    break;
+                    
+                case "nearbyBubbles":
+                    console.log("📦 收到附近气泡:", data.bubbles.length);
+                    data.bubbles.forEach(bubble => addBubble(bubble));
+                    break;
+                    
+                case "publicChat":
+                    console.log("💬 收到聊天消息:", data.from, data.msg);
+                    // 检查是否是自己的消息（避免回声）
+                    const isMyMessage = currentUser && 
+                        (data.fromId === currentUser.id || data.from === currentUser.nickname);
+                    
+                    if (!isMyMessage) {
+                        // 只有其他人的消息才显示，自己的消息已经在sendChatMessage中显示了
+                        addChatMessage({
+                            from: data.from,
+                            avatar: data.avatar,
+                            text: data.msg,
+                            time: data.time,
+                            isMyMessage: false
+                        });
+                    }
+                    break;
+                    
+                case "userPosition":
+                    // 更新其他用户的位置信息
+                    updateOtherUserPosition(data);
+                    break;
+                    
+                case "onlineUsers":
+                    // 更新在线用户列表
+                    updateOnlineUsersList(data.users);
+                    break;
+                    
+                case "clearBubblesResponse":
+                    console.log("✅ 服务器已确认清除气泡:", data.message);
+                    showNetworkStatus("服务器已确认清除气泡", 2000);
+                    // 这里可以做一些额外的清理工作
+                    break;
+                    
+                case "bubblesCleared":
+                    // 服务器通知气泡已被清除
+                    console.log("🎯 服务器已清除气泡");
+                    // 不需要再做什么，因为本地已经清除了
+                    break;
+
+                default:
+                    console.log("⚠️ 未处理的消息类型:", data.type);
+            }
+        }
+
+        function handleLoginSuccess(user) {
+            console.log("✅ 登录成功:", user);
+            
+            // 更新用户信息
+            if (!currentUser) {
+                currentUser = {
+                    id: user.id,
+                    nickname: user.nickname || user.username,
+                    avatar: user.avatar || '👤'
+                };
+            } else {
+                currentUser.id = user.id;
+            }
+            
+            // 更新UI显示
+            document.getElementById('userNickname').textContent = currentUser.nickname;
+            document.getElementById('userId').textContent = `ID: ${user.id}`;
+            
+            // 确保我的位置已设置
+            if (!myPosition) {
+                myPosition = user.lat && user.lng ? 
+                    { lat: user.lat, lng: user.lng } : 
+                    { lat: 39.9042, lng: 116.4074 };
+            }
+            
+            // 更新我的位置标记和范围圆圈
+            updateMyMarker();
+            updateMyRange();
+            
+            // 刷新所有标记
+            refreshAllMarkers();
+            
+            // 请求附近气泡
+            setTimeout(() => {
+                requestNearbyBubbles();
+            }, 500);
+            
+            // 显示欢迎消息
+            if (typeof window.showWelcomeMessage === 'function') {
+                window.showWelcomeMessage();
+            }
+        }
+
+        function updateOnlineCount(count) {
+            console.log("👥 在线人数:", count);
+            // 可以在这里更新在线人数显示
+        }
+
+        function updateOnlineUsersList(users) {
+            const container = document.getElementById('onlineUsersList');
+            if (!container) return;
+            
+            // 清空在线用户列表
+            onlineUsers = {};
+            
+            if (users && users.length > 0) {
+                // 更新在线用户信息
+                users.forEach(user => {
+                    onlineUsers[user.userId] = {
+                        lat: user.lat,
+                        lng: user.lng,
+                        nickname: user.nickname,
+                        range: user.range || 1000  // ✅ 确保有范围信息
+                    };
+                });
+                
+                // 刷新标记
+                refreshAllMarkers();  // ✅ 重要：更新后立即刷新标记
+                
+                // 更新UI列表
+                container.innerHTML = users.map(user => `
+                    <div class="user-item">
+                        <span style="color: #5483B3">👤</span>
+                        <span>${user.nickname}</span>
+                        <span style="font-size: 12px; color: #666">
+                            ${user.lat ? `(${user.lat.toFixed(4)}, ${user.lng.toFixed(4)})` : '(位置未知)'}
+                            <br>范围: ${user.range || 1000}米
+                        </span>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<div class="user-item"><span style="color: #5483B3">👤</span><span>暂无其他在线用户</span></div>';
+            }
+        }
+
+
+        function updateOtherUserPosition(data) {
+            if (!data.userId) return;
+            
+            // 如果是自己，跳过
+            if (currentUser && data.userId === currentUser.id) {
+                return;
+            }
+            
+            // 更新用户信息
+            onlineUsers[data.userId] = {
+                lat: data.lat,
+                lng: data.lng,
+                nickname: data.nickname,
+                range: data.range || 1000
+            };
+            
+            // 刷新标记
+            refreshAllMarkers();
+            
+            console.log(`📍 更新用户位置: ${data.nickname} (${data.lat.toFixed(4)}, ${data.lng.toFixed(4)})`);
+        }
+
+        // ==================== 气泡功能 ====================
+        function selectBubbleType(type) {
+            selectedBubbleType = type;
+            
+            // 更新UI
+            document.querySelectorAll('.bubble-type-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            document.querySelector(`[data-type="${type}"]`).classList.add('selected');
+            
+            console.log("✅ 选择气泡类型:", type);
+        }
+
+        function publishBubble() {
+            const title = document.getElementById('bubbleTitle').value.trim();
+            const content = document.getElementById('bubbleContent').value.trim();
+            
+            if (!title) {
+                showNetworkStatus("请输入气泡标题", 2000);
+                return;
+            }
+            
+            if (!currentUser) {
+                showNetworkStatus("请先登录", 2000);
+                return;
+            }
+            
+            // 使用当前选择的位置
+            const publishPosition = myPosition;
+            
+            // ✅ 使用正确的消息格式：publishBubble
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: "publishBubble",
+                    bubbleType: selectedBubbleType,
+                roomCode: selectedBubbleType === 'group' ? generateChatroomCode() : null,  // ⭐ 建群类型生成聊天室代码
+                    title: title,
+                    content: content,
+                    lat: publishPosition.lat,
+                    lng: publishPosition.lng,
+                    duration: 3600,
+                    activityTags: []
+                }));
+                
+                console.log("📤 发送气泡(publishBubble):", {title, type: selectedBubbleType});
+                showNetworkStatus("气泡发布成功！", 2000);
+            }
+            
+            // 清空表单
+            document.getElementById('bubbleTitle').value = '';
+            document.getElementById('bubbleContent').value = '';
+        }
+
+
+        function addBubble(bubble) {
+            // 检查清除标记
+            if (window.clearBubblesFlag) {
+                console.log("🚫 清除模式中，忽略新气泡:", bubble.id);
+                return;
+            }
+
+            // 检查是否已存在
+            const existingBubble = bubbles.find(b => b.id === bubble.id);
+            if (existingBubble) {
+                console.log("⚠️ 气泡已存在，跳过:", bubble.id);
+                return;
+            }
+
+            // ⭐ 关键：建群气泡的roomCode应该由服务器提供
+            if (bubble.type === 'group') {
+                if (!bubble.roomCode) {
+                    console.error("❌ 建群气泡缺少roomCode！");
+                    console.error("   气泡ID:", bubble.id);
+                    console.error("   这个气泡无法正常使用，请检查服务器端代码");
+                    console.error("   服务器需要保存客户端发送的roomCode");
+                    // 不再自动生成，避免每个客户端生成不同的代码
+                } else {
+                    console.log("✅ 建群气泡roomCode:", bubble.roomCode);
+                }
+            }
+            
+            // 确保气泡有必要的字段
+            if (!bubble.createdAt) {
+                bubble.createdAt = Date.now();
+            }
+            if (!bubble.time) {
+                bubble.time = bubble.createdAt;
+            }
+            
+            // 添加到列表
+            bubbles.push(bubble);
+            
+            // 在地图上显示
+            const label = addBubbleToMap(bubble);
+            
+            if (label) {
+                console.log("✅ 成功添加气泡到地图:", bubble.title);
+                showNetworkStatus(`收到新气泡: ${bubble.title}`, 2000);
+            } else {
+                console.error("❌ 添加气泡到地图失败:", bubble.title);
+            }
+            
+            return bubble;
+        }
+
+        // 显示长按提示
+        let currentHint = null;
+
+        function showLongPressHint(bubbleTitle, position) {
+            // 移除现有的提示
+            hideLongPressHint();
+            
+            // 创建提示元素
+            currentHint = document.createElement('div');
+            currentHint.className = 'long-press-hint';
+            currentHint.textContent = `长按显示 ${bubbleTitle} 详情`;
+            
+            // 计算位置
+            const pixelPosition = map.getProjection().fromLatLngToContainerPixel(position);
+            currentHint.style.left = (pixelPosition.x + 10) + 'px';
+            currentHint.style.top = (pixelPosition.y + 60) + 'px';
+            
+            document.body.appendChild(currentHint);
+        }
+
+        // 隐藏长按提示
+        function hideLongPressHint() {
+            if (currentHint) {
+                currentHint.remove();
+                currentHint = null;
+            }
+        }
+
+
+        function getBubbleTypeName(type) {
+            const names = {
+                recommend: '推荐',
+                help: '求助',
+                team: '组队',
+                warning: '避雷',
+                news: '见闻'
+            };
+            return names[type] || type;
+        }
+
+
+            
+        function addBubbleToMap(bubble) {
+            if (!map) {
+                console.warn("地图未初始化，无法添加气泡");
+                return;
+            }
+            
+            // 气泡图标映射
+            const icons = {
+                recommend: '👍',
+                help: '🆘',
+                team: '👥',
+                warning: '⚠️',
+                news: '📰',
+                group: '💬'
+            };
+            
+            const icon = icons[bubble.type] || '📍';
+            
+            // 创建气泡标签
+            const label = new qq.maps.Label({
+                position: new qq.maps.LatLng(bubble.lat, bubble.lng),
+                map: map,
+                content: `<div class="bubble bubble-${bubble.type}" 
+                        data-bubble-id="${bubble.id}"
+                        style="cursor: pointer;"
+                        title="长按2秒查看详情">${icon}</div>`,
+                style: { border: 'none', background: 'transparent' }
+            });
+            
+            console.log(`🎯 创建气泡标签: ${bubble.title}, 位置: ${bubble.lat}, ${bubble.lng}`);
+            
+            // 长按计时器
+            let longPressTimer = null;
+            let isLongPressing = false;
+            
+            // 点击事件 - 用于调试和快速查看
+            qq.maps.event.addListener(label, 'click', function(e) {
+                console.log(`👆 点击气泡: ${bubble.title}`);
+                // 仍然可以点击，但显示提示
+                showNetworkStatus(`长按2秒查看 ${bubble.title} 的详细信息`, 2000);
+            });
+            
+            // 触摸开始事件（移动端）
+            qq.maps.event.addListener(label, 'touchstart', function(e) {
+                console.log(`🖐️ 触摸开始: ${bubble.title}`);
+                
+                // 只阻止冒泡，不阻止默认行为
+                if (e && e.domEvent) {
+                    e.domEvent.stopPropagation();
+                }
+                
+                // 开始长按计时
+                longPressTimer = setTimeout(function() {
+                    console.log(`⏱️ 长按完成: ${bubble.title}`);
+                    isLongPressing = true;
+                    showBubbleInfoWindow(bubble, label);
+                    
+                    // 添加长按反馈效果
+                    const bubbleEl = document.querySelector(`[data-bubble-id="${bubble.id}"]`);
+                    if (bubbleEl) {
+                        bubbleEl.classList.add('marker-pressing');
+                    }
+                    
+                    // 显示长按提示
+                    showLongPressHint(bubble.title, label.getPosition());
+                }, 2000); // 2秒长按
+            });
+            
+            // 触摸结束事件（移动端）
+            qq.maps.event.addListener(label, 'touchend', function(e) {
+                console.log(`🖐️ 触摸结束: ${bubble.title}`);
+                
+                // 清除计时器
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                }
+                
+                // 移除长按反馈效果
+                const bubbleEl = document.querySelector(`[data-bubble-id="${bubble.id}"]`);
+                if (bubbleEl) {
+                    bubbleEl.classList.remove('marker-pressing');
+                }
+                
+                // 移除提示
+                hideLongPressHint();
+            });
+            
+            // 触摸取消事件（移动端）
+            qq.maps.event.addListener(label, 'touchcancel', function() {
+                console.log(`❌ 触摸取消: ${bubble.title}`);
+                
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                }
+                
+                const bubbleEl = document.querySelector(`[data-bubble-id="${bubble.id}"]`);
+                if (bubbleEl) {
+                    bubbleEl.classList.remove('marker-pressing');
+                }
+                
+                hideLongPressHint();
+            });
+            
+            // 鼠标按下事件（桌面端）
+            qq.maps.event.addListener(label, 'mousedown', function(e) {
+                console.log(`🖱️ 鼠标按下: ${bubble.title}`);
+                
+                // 只阻止冒泡
+                if (e && e.domEvent) {
+                    e.domEvent.stopPropagation();
+                }
+                
+                longPressTimer = setTimeout(function() {
+                    console.log(`⏱️ 桌面端长按完成: ${bubble.title}`);
+                    isLongPressing = true;
+                    showBubbleInfoWindow(bubble, label);
+                    
+                    // 添加长按反馈效果
+                    const bubbleEl = document.querySelector(`[data-bubble-id="${bubble.id}"]`);
+                    if (bubbleEl) {
+                        bubbleEl.classList.add('marker-pressing');
+                    }
+                    
+                    // 显示长按提示
+                    showLongPressHint(bubble.title, label.getPosition());
+                }, 2000);
+            });
+            
+            // 鼠标松开事件（桌面端）
+            qq.maps.event.addListener(label, 'mouseup', function(e) {
+                console.log(`🖱️ 鼠标松开: ${bubble.title}`);
+                
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                }
+                
+                // 移除长按反馈效果
+                const bubbleEl = document.querySelector(`[data-bubble-id="${bubble.id}"]`);
+                if (bubbleEl) {
+                    bubbleEl.classList.remove('marker-pressing');
+                }
+                
+                // 移除提示
+                hideLongPressHint();
+            });
+            
+            // 鼠标离开事件（防止拖动地图时触发长按）
+            qq.maps.event.addListener(label, 'mouseout', function() {
+                console.log(`🚪 鼠标离开: ${bubble.title}`);
+                
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                }
+                
+                const bubbleEl = document.querySelector(`[data-bubble-id="${bubble.id}"]`);
+                if (bubbleEl) {
+                    bubbleEl.classList.remove('marker-pressing');
+                }
+                
+                hideLongPressHint();
+            });
+            
+            // 保存标记引用
+            bubbleMarkers.set(bubble.id, { bubble, label });
+            
+            console.log(`✅ 气泡已成功添加到地图: ${bubble.title}`);
+            return label;
+        }
+
+
+        // 显示气泡信息窗口
+        // 显示气泡信息窗口（长按2秒后触发）
+        function showBubbleInfoWindow(bubble, label) {
+            console.log(`🪟 显示气泡信息窗口: ${bubble.title}`);
+            
+            // 关闭现有的信息窗口
+            if (currentInfoWindow) {
+                currentInfoWindow.close();
+                currentInfoWindow = null;
+            }
+            
+            const typeNames = {
+                recommend: '推荐',
+                help: '求助',
+                team: '组队',
+                warning: '避雷',
+                news: '见闻',
+                group: '💬 建群'
+            };
+            
+            const typeName = typeNames[bubble.type] || bubble.type;
+            
+            // 添加房间代码显示
+            const roomCodeDisplay = bubble.type === 'group' && bubble.roomCode ? 
+                `<div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #FFD700;">
+                    <div style="font-weight: 600; color: #052659; margin-bottom: 5px;">💬 群聊代码</div>
+                    <div style="font-family: 'Courier New', monospace; font-size: 20px; color: #052659; letter-spacing: 2px; text-align: center; padding: 8px;">
+                        ${bubble.roomCode}
+                    </div>
+                    <button onclick="setChatroomCode('${bubble.roomCode}')" 
+                            style="width: 100%; padding: 8px; margin-top: 8px; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); border: none; border-radius: 6px; color: #052659; font-weight: 600; cursor: pointer;"
+                            onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(255, 215, 0, 0.4)';"
+                            onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='none';">
+                        加入此群聊
+                    </button>
+                </div>` : '';
+            
+            // ⭐ 关键修复：创建正确的HTML内容
+            const content = `
+                <div style="
+                    background: white;
+                    border-radius: 12px;
+                    padding: 15px;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+                    min-width: 250px;
+                    max-width: 350px;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+                ">
+                    <button onclick="closeBubbleInfoWindow()" 
+                            style="position: absolute; top: 5px; right: 5px; width: 20px; height: 20px; border-radius: 50%; background: rgba(0,0,0,0.1); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #666; transition: all 0.2s;"
+                            onmouseover="this.style.background='rgba(0,0,0,0.2)';this.style.color='#000';"
+                            onmouseout="this.style.background='rgba(0,0,0,0.1)';this.style.color='#666';">
+                        ×
+                    </button>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #e0e0e0;">
+                        <div style="font-size: 16px; font-weight: 600; color: #052659;">${escapeHtml(bubble.title)}</div>
+                        <span style="padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; color: white; background: ${getBubbleColor(bubble.type)};">${typeName}</span>
+                    </div>
+                    ${roomCodeDisplay}
+                    ${bubble.content ? `<div style="color: #495057; font-size: 14px; line-height: 1.6; margin: 10px 0;">${escapeHtml(bubble.content)}</div>` : ''}
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 10px; border-top: 1px solid #e0e0e0; font-size: 12px; color: #6c757d;">
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <span>${bubble.avatar || '👤'}</span>
+                            <span>${escapeHtml(bubble.author || '匿名')}</span>
+                        </div>
+                        <div>${formatTime(bubble.createdAt || Date.now())}</div>
+                    </div>
+                    <div style="font-size: 11px; color: #6c757d; text-align: center; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #e0e0e0;">
+                        10秒后自动关闭，或点击×关闭
+                    </div>
+                </div>
+            `;
+            
+            try {
+                console.log(`📍 气泡位置: ${bubble.lat}, ${bubble.lng}`);
+                
+                // 获取标签的位置
+                const labelPosition = label.getPosition();
+                console.log(`📍 标签位置: ${labelPosition.getLat()}, ${labelPosition.getLng()}`);
+                
+                // 创建信息窗口
+                const infoWindow = new qq.maps.InfoWindow({
+                    map: map,
+                    position: labelPosition,
+                    content: content
+                });
+                
+                // 打开信息窗口
+                infoWindow.open();
+                currentInfoWindow = infoWindow;
+                
+                console.log("✅ 气泡信息窗口已打开");
+                
+                // 高亮选中的气泡
+                document.querySelectorAll('.bubble').forEach(el => el.classList.remove('active'));
+                const bubbleEl = document.querySelector(`[data-bubble-id="${bubble.id}"]`);
+                if (bubbleEl) {
+                    bubbleEl.classList.add('active');
+                    console.log("✨ 气泡高亮");
+                }
+                
+                // 显示网络状态提示
+                showNetworkStatus(`已显示气泡详情：${bubble.title}`, 2000);
+                
+                // 10秒后自动关闭
+                setTimeout(() => {
+                    if (currentInfoWindow === infoWindow) {
+                        closeBubbleInfoWindow();
+                    }
+                }, 10000);
+                
+                return infoWindow;
+                
+            } catch (error) {
+                console.error("❌ 创建信息窗口失败:", error);
+                showNetworkStatus("无法显示气泡信息", 2000);
+                return null;
+            }
+        }
+
+
+        function closeBubbleInfoWindow() {
+            if (currentInfoWindow) {
+                currentInfoWindow.close();
+                currentInfoWindow = null;
+            }
+            // 移除所有气泡的高亮状态
+            document.querySelectorAll('.bubble').forEach(el => el.classList.remove('active'));
+        }
+
+
+        function getBubbleIcon(type) {
+            const emojis = {
+                recommend: '👍',
+                help: '🆘',
+                team: '👥',
+                warning: '⚠️',
+                news: '📰'
+            };
+            
+            const emoji = emojis[type] || '🎈';
+            const color = getBubbleColor(type);
+            
+            // 创建SVG图标
+            const svg = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+                    <circle cx="24" cy="24" r="22" fill="${color}" stroke="white" stroke-width="3"/>
+                    <text x="24" y="32" text-anchor="middle" fill="white" font-size="24" font-family="Arial">${emoji}</text>
+                </svg>
+            `;
+            
+            return new qq.maps.MarkerImage(
+                'data:image/svg+xml;utf8,' + encodeURIComponent(svg),
+                new qq.maps.Size(48, 48),
+                new qq.maps.Point(0, 0),
+                new qq.maps.Point(24, 24)
+            );
+        }
+
+        function getBubbleColor(type) {
+            const colors = {
+                recommend: '#FF4444',
+                help: '#FFD700',
+                team: '#4169E1',
+                warning: '#9932CC',
+                news: '#FF69B4'
+            };
+            return colors[type] || '#5483B3';
+        }
+
+
+        function showBubbleInfo(bubble) {
+            let roomCodeInfo = '';
+            if (bubble.type === 'group' && bubble.roomCode) {
+                roomCodeInfo = `\n💬 群聊代码: ${bubble.roomCode}\n点击"加入此群聊"即可进入`;
+            }
+            
+            const info = `
+        🎈 气泡详情：
+        标题：${bubble.title}
+        类型：${getBubbleTypeName(bubble.type)}
+        作者：${bubble.author}
+        内容：${bubble.content || "无内容"}
+        时间：${formatTime(bubble.time)}
+        位置：${bubble.lat.toFixed(4)}, ${bubble.lng.toFixed(4)}
+        ${roomCodeInfo}
+            `;
+            
+            showNetworkStatus(info, 4000);
+        }
+
+        function clearAllBubbles() {
+            console.log("🗑️ 开始清除所有气泡");
+            
+            // 设置清除标记，防止新气泡被添加
+            clearBubblesFlag = true;
+            
+            // 10秒后自动解除清除模式
+            if (clearTimeoutId) clearTimeout(clearTimeoutId);
+            clearTimeoutId = setTimeout(() => {
+                clearBubblesFlag = false;
+                console.log("🔄 自动解除清除模式");
+            }, 10000);
+            
+            // 1. 先发送请求到服务器清除气泡
+            if (socket && socket.readyState === WebSocket.OPEN && currentUser) {
+                socket.send(JSON.stringify({
+                    type: "clearBubbles",
+                    userId: currentUser.id,
+                    clearAll: true
+                }));
+                console.log("📤 已发送清除气泡请求到服务器");
+            }
+            
+            // 2. 从地图上移除所有气泡标记
+            bubbleMarkers.forEach((markerInfo, bubbleId) => {
+                if (markerInfo.label) {
+                    markerInfo.label.setMap(null);
+                }
+            });
+            
+            // 3. 清空存储
+            bubbleMarkers.clear();
+            bubbles.length = 0;
+            
+            // 4. 更新UI
+            updateBubblesList();
+            
+            // 5. 关闭信息窗口
+            if (currentInfoWindow) {
+                currentInfoWindow.close();
+                currentInfoWindow = null;
+            }
+            
+            console.log("✅ 气泡清除完成（锁定10秒）");
+            showNetworkStatus("已清除气泡，10秒内不会接收新气泡", 3000);
+        }
+
+        // 添加解除清除模式的函数
+        function enableBubbleReceiving() {
+            clearBubblesFlag = false;
+            if (clearTimeoutId) {
+                clearTimeout(clearTimeoutId);
+                clearTimeoutId = null;
+            }
+            console.log("🔄 已启用气泡接收");
+            showNetworkStatus("已恢复接收新气泡", 2000);
+        }   
+  
+
+
+                // ==================== 公屏聊天功能 ====================
+        function toggleChatPanel() {
+            chatPanelVisible = !chatPanelVisible;
+            const panel = document.getElementById('chatPanel');
+            const toggleBtn = document.getElementById('chatToggleBtn');
+            
+            if (chatPanelVisible) {
+                panel.style.display = 'flex';
+                toggleBtn.style.display = 'none';
+                unreadCount = 0;
+                updateChatBadge();
+                document.getElementById('chatInput').focus();
+            } else {
+                panel.style.display = 'none';
+                toggleBtn.style.display = 'flex';
+            }
+        }
+
+        function handleChatInputKey(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendChatMessage();
+            }
+        }
+
+      function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    let text = input.value.trim();
+    
+    if (!text) return;
+    
+    if (!currentUser) {
+        showNetworkStatus("请先登录", 2000);
+        return;
+    }
+    
+    // ⭐ 修复：检查消息是否有有效内容
+    const prefixMatch = text.match(/^\[(\d{6})\]\s+/);
+    
+    if (prefixMatch) {
+        // 有前缀，检查前缀后的内容是否为空
+        const actualContent = text.substring(prefixMatch[0].length).trim();
+        if (!actualContent) {
+            showNetworkStatus("消息内容不能为空", 2000);
+            return;
+        }
+    } else {
+        // 没有前缀，自动添加[000000]
+        text = '[000000] ' + text;
+        console.log('⭐ 自动添加[000000]前缀:', text);
+    }
+    
+    // 生成消息ID用于防止回声
+    const messageId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    sentMessageIds.add(messageId);
+    
+    // 立即在本地显示自己的消息
+    addChatMessage({
+        id: messageId,
+        from: currentUser.nickname,
+        avatar: currentUser.avatar,
+        text: text,
+        time: Date.now(),
+        isMyMessage: true
+    });
+    
+    // ✅ 使用正确的消息格式：publicChat
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+            type: "publicChat",
+            msg: text,
+            messageId: messageId
+        }));
+        
+        console.log("📤 发送聊天消息:", text);
+    }
+    
+    input.value = '';
+    
+    // ⭐ 如果在聊天室模式，重新添加前缀
+    if (currentChatroomCode !== '000000') {
+        input.value = '[' + currentChatroomCode + '] ';
+    }
+    
+    input.focus();
+}
+function addChatMessage(message) {
+    // 检查是否已存在（避免重复）
+    if (message.id && sentMessageIds.has(message.id)) {
+        console.log("⚠️ 消息已存在，跳过:", message.id);
+        return;
+    }
+    
+    // ⭐ 系统消息始终显示
+    if (message.isSystem) {
+        console.log('🔍 系统消息，始终显示:', message.text);
+        chatMessages.push(message);
+        if (chatMessages.length > 100) {
+            chatMessages = chatMessages.slice(-100);
+        }
+        updateChatMessages();
+        return;
+    }
+    
+    // ⭐ 核心逻辑2：消息筛选
+    const text = message.text || '';
+    console.log('🔍 处理消息:', text, '当前聊天室代码:', currentChatroomCode);
+    
+    const prefixMatch = text.match(/^\[(\d{6})\]\s+/);
+    
+    if (prefixMatch) {
+        const messageRoomCode = prefixMatch[1];
+        const actualContent = text.substring(prefixMatch[0].length).trim();
+        
+        console.log('🔍 提取的房间代码:', messageRoomCode, '实际内容:', actualContent);
+        
+        // ⭐ 修复：检查消息是否有实际内容
+        if (!actualContent) {
+            console.log('⚠️ 消息只有前缀无内容，跳过');
+            return;
+        }
+        
+        // 当前聊天代码为000000（公屏）：只显示[000000]的消息
+        if (currentChatroomCode === '000000') {
+            if (messageRoomCode !== '000000') {
+                console.log('⏭️ 公屏模式，过滤聊天室消息 [' + messageRoomCode + ']');
+                return;
+            }
+        } else {
+            // 当前聊天代码非000000（聊天室）：显示[000000]或当前聊天室的消息
+            if (messageRoomCode !== '000000' && messageRoomCode !== currentChatroomCode) {
+                console.log('⏭️ 聊天室[' + currentChatroomCode + ']模式，过滤其他聊天室消息 [' + messageRoomCode + ']');
+                return;
+            }
+        }
+    } else {
+        // 没有前缀的消息（理论上不应该出现，但兼容处理）
+        console.log('⚠️ 收到无前缀消息（兼容显示）:', text);
+        // 无前缀消息应该被过滤，除非特别处理
+        return;
+    }
+    
+    // 添加到列表
+    chatMessages.push(message);
+    
+    // 保持最多100条消息
+    if (chatMessages.length > 100) {
+        chatMessages = chatMessages.slice(-100);
+    }
+    
+    // 更新UI
+    updateChatMessages();
+    
+    // 未读消息提示
+    if (!chatPanelVisible && !message.isMyMessage) {
+        unreadCount++;
+        updateChatBadge();
+    }
+    
+    console.log("💬 添加聊天消息:", message.from, message.text);
+}
+
+        function updateChatMessages() {
+            const container = document.getElementById('chatMessages');
+            if (!container) return;
+            
+            container.innerHTML = chatMessages.map(msg => {
+                const messageClass = msg.isMyMessage ? 'chat-message my-message' : 'chat-message';
+                const senderName = msg.isMyMessage ? '我' : msg.from;
+                const avatar = msg.isMyMessage ? '👤' : (msg.avatar || '👤');
+                
+                // ⭐ 解析消息前缀
+                const text = msg.text || '';
+                const prefixMatch = text.match(/^\[(\d{6})\]\s+/);
+                let roomCode = null;
+                let actualMessage = text;
+                let roomBadge = '';
+                let messageStyle = 'color: #052659; font-size: 13px;';
+                
+                if (prefixMatch) {
+                    roomCode = prefixMatch[1];
+                    actualMessage = text.substring(prefixMatch[0].length);
+                    
+                    if (roomCode === '000000') {
+                        // 公屏消息 - 蓝色
+                        roomBadge = '<span style="background: #5483B3; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-right: 4px;">📢 公屏</span>';
+                    } else {
+                        // 聊天室消息 - 金色
+                        roomBadge = '<span style="background: #FFD700; color: #052659; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-right: 4px;">💬 [' + roomCode + ']</span>';
+                    }
+                }
+                
+                return `
+                    <div class="${messageClass}">
+                        <div class="sender">${roomBadge}${avatar} ${senderName}</div>
+                        <div style="${messageStyle}">${escapeHtml(actualMessage)}</div>
+                        <div class="time">${formatTime(msg.time, true)}</div>
+                    </div>
+                `;
+            }).join('');
+            
+            // 滚动到底部
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function updateChatBadge() {
+            const badge = document.getElementById('chatBadge');
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        // ==================== 辅助函数 ====================
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatTime(timestamp, showSeconds = false) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = now - date;
+            
+            // 如果是今天
+            if (diff < 24 * 60 * 60 * 1000) {
+                const hours = date.getHours().toString().padStart(2, '0');
+                const minutes = date.getMinutes().toString().padStart(2, '0');
+                const seconds = showSeconds ? ':' + date.getSeconds().toString().padStart(2, '0') : '';
+                return `${hours}:${minutes}${seconds}`;
+            }
+            
+            // 如果是今年
+            if (date.getFullYear() === now.getFullYear()) {
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                const day = date.getDate().toString().padStart(2, '0');
+                return `${month}-${day}`;
+            }
+            
+            return date.toLocaleDateString();
+        }
+
+        function showNetworkStatus(message, duration = 3000) {
+            const status = document.getElementById('networkStatus');
+            status.textContent = message;
+            status.classList.add('show');
+            
+            if (duration > 0) {
+                setTimeout(() => {
+                    status.classList.remove('show');
+                }, duration);
+            }
+        }
+
+        // ==================== 测试函数 ====================
+        function loginTestUser() {
+            // 使用测试账号快速登录
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'authLogin',
+                    loginId: 'testuser',
+                    password: '123456'
+                }));
+                
+                console.log("👤 尝试使用测试账号登录...");
+                showNetworkStatus("正在登录测试账号...", 2000);
+            } else {
+                showNetworkStatus("WebSocket未连接，请稍后重试", 2000);
+            }
+        }
+    
+// ==================== 聊天室功能模块 ====================
+
+/**
+ * 当前聊天室代码
+ * 默认为 "000000" 表示不在任何聊天室（公屏模式）
+ */
+
+/**
+ * 生成6位随机聊天室代码（非全0）
+ * @returns {string} 6位数字聊天室代码
+ */
+function generateChatroomCode() {
+    let code;
+    do {
+        code = String(Math.floor(100000 + Math.random() * 900000));
+    } while (code === "000000");
+    return code;
+}
+
+/**
+ * 更新聊天室代码
+ * 当用户手动修改聊天室代码输入框时调用
+ */
+
+function updateChatroomCode() {
+    const input = document.getElementById('chatroomCodeInput');
+    if (!input) return;
+    
+    let code = input.value.trim();
+    
+    // 空值自动设置为000000
+    if (code.length === 0) {
+        code = "000000";
+    }
+    
+    // 验证格式（必须是6位数字）
+    if (!/^\d{6}$/.test(code)) {
+        alert('聊天室代码必须是6位数字');
+        input.value = currentChatroomCode;
+        return;
+    }
+    
+    // 更新聊天室代码
+    const oldCode = currentChatroomCode;
+    currentChatroomCode = code;
+    input.value = code;
+    
+    console.log('📡 切换聊天室代码:', oldCode, '->', currentChatroomCode);
+    
+    // 更新聊天输入框提示
+    updateChatInputPlaceholder();
+    
+    // ⭐ 重要：重新过滤所有消息
+    refilterAllMessages();
+    
+    // 显示通知
+    if (code === "000000") {
+        showNotification('已退出聊天室，当前为公屏模式');
+    } else {
+        showNotification('已进入聊天室 [' + code + ']');
+    }
+}
+
+// ⭐ 新增：重新过滤所有消息
+// ⭐ 新增：重新过滤所有消息
+function refilterAllMessages() {
+    console.log('🔄 重新过滤所有消息，当前聊天室:', currentChatroomCode);
+    
+    if (chatMessages.length === 0) {
+        console.log('🔍 没有消息需要重新过滤');
+        updateChatMessages();
+        showNetworkStatus(`已切换到聊天室 ${currentChatroomCode}`, 2000);
+        return;
+    }
+    
+    // 备份所有消息
+    const allMessagesBackup = [...chatMessages];
+    
+    // 清空当前显示的消息
+    chatMessages = [];
+    
+    // 重新添加所有消息（会自动过滤）
+    let keptCount = 0;
+    let filteredCount = 0;
+    
+    allMessagesBackup.forEach(msg => {
+        // 系统消息始终添加
+        if (msg.isSystem) {
+            chatMessages.push(msg);
+            keptCount++;
+            return;
+        }
+        
+        // 重新应用过滤逻辑
+        const text = msg.text || '';
+        const prefixMatch = text.match(/^\[(\d{6})\]\s+/);
+        
+        if (prefixMatch) {
+            const messageRoomCode = prefixMatch[1];
+            const actualContent = text.substring(prefixMatch[0].length).trim();
+            
+            // ⭐ 修复：检查消息是否有实际内容
+            if (!actualContent) {
+                filteredCount++;
+                console.log('⚠️ 过滤只有前缀无内容的消息:', text);
+                return;
+            }
+            
+            if (currentChatroomCode === '000000') {
+                // 公屏模式：只显示[000000]的消息
+                if (messageRoomCode === '000000') {
+                    chatMessages.push(msg);
+                    keptCount++;
+                } else {
+                    filteredCount++;
+                }
+            } else {
+                // 聊天室模式：显示[000000]或当前聊天室的消息
+                if (messageRoomCode === '000000' || messageRoomCode === currentChatroomCode) {
+                    chatMessages.push(msg);
+                    keptCount++;
+                } else {
+                    filteredCount++;
+                }
+            }
+        } else {
+            // 无前缀消息过滤掉
+            filteredCount++;
+        }
+    });
+    
+    console.log(`🔍 重新过滤完成: 保留${keptCount}条，过滤${filteredCount}条`);
+    
+    // 更新UI
+    updateChatMessages();
+    showNetworkStatus(`已切换到聊天室 ${currentChatroomCode}，显示${keptCount}条消息`, 2000);
+}
+/**
+ * 重置聊天室代码到000000（公屏模式）
+ */
+function resetChatroomCode() {
+    const input = document.getElementById('chatroomCodeInput');
+    if (input) {
+        input.value = "000000";
+        updateChatroomCode();
+    }
+}
+
+/**
+ * 设置聊天室代码（点击建群气泡时调用）
+ * @param {string} code - 聊天室代码
+ */
+function setChatroomCode(code) {
+    const input = document.getElementById('chatroomCodeInput');
+    if (input) {
+        input.value = code;
+        updateChatroomCode();
+    }
+}
+
+/**
+ * 更新聊天输入框的提示文字
+ * 根据当前聊天室状态显示不同提示
+ */
+function updateChatInputPlaceholder() {
+    const chatInput = document.getElementById('chatInput');
+    if (!chatInput) return;
+    
+    if (currentChatroomCode === "000000") {
+        chatInput.placeholder = "输入公屏消息...";
+        chatInput.value = "";  // 清空输入框
+    } else {
+        chatInput.placeholder = "输入消息（自动添加[" + currentChatroomCode + "]前缀，可删除以发公屏）";
+        // 自动添加前缀
+        if (!chatInput.value.startsWith('[' + currentChatroomCode + '] ')) {
+            chatInput.value = '[' + currentChatroomCode + '] ';
+        }
+    }
+}
+
+function showNotification(message) {
+    console.log('📢', message);
+    
+    // 创建通知元素
+    const notification = document.createElement('div');
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 70px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(52, 152, 219, 0.95);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        z-index: 10000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        animation: slideDown 0.3s ease;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // 3秒后淡出并移除
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transition = 'opacity 0.5s';
+        setTimeout(() => notification.remove(), 500);
+    }, 3000);
+}
+
+
+
+
+// ==================== 在JavaScript中添加以下函数 ====================
+
+// 面板状态管理
+let activeBottomButton = null;
+
+// 切换气泡列表面板（控制右侧面板）
+
+// ==================== 只修复气泡列表按钮逻辑 ====================
+
+// 切换气泡列表面板（控制右侧面板）
+function toggleBubbleListPanel() {
+    const panel = document.getElementById('controlPanel');
+    const mapContainer = document.getElementById('mapContainer');
+    const bubbleBtn = document.querySelector('.bottom-btn:nth-child(1)');
+    const chatBtn = document.querySelector('.bottom-btn:nth-child(2)');
+    
+    panelCollapsed = !panelCollapsed;
+    
+    if (panelCollapsed) {
+        // 面板收起时
+        panel.classList.add('collapsed');
+        mapContainer.classList.add('full-width');
+        bubbleBtn.classList.remove('active'); // 面板收起时，按钮不应该高亮
+        activeBottomButton = null;
+    } else {
+        // 面板展开时
+        panel.classList.remove('collapsed');
+        mapContainer.classList.remove('full-width');
+        bubbleBtn.classList.add('active'); // 面板展开时，按钮应该高亮
+        chatBtn.classList.remove('active'); // 确保聊天按钮不高亮
+        activeBottomButton = 'bubbleList';
+    }
+    
+    // 关闭其他面板但保持按钮状态
+    // 不要在这里调用 closeChatPanel()，因为那会影响聊天按钮
+    // 直接关闭聊天面板但不影响按钮
+    const chatPanel = document.getElementById('chatPanel');
+    const chatToggleBtn = document.getElementById('chatToggleBtn');
+    if (chatPanel) {
+        chatPanel.style.display = 'none';
+    }
+    if (chatToggleBtn) {
+        chatToggleBtn.style.display = 'flex';
+    }
+    
+    // 隐藏发布面板但不影响按钮
+    const publishPanel = document.getElementById('publishPanel');
+    if (publishPanel) {
+        publishPanel.style.display = 'none';
+    }
+    
+    console.log("气泡列表面板:", panelCollapsed ? "收起" : "展开", "气泡按钮高亮:", !panelCollapsed);
+}
+
+
+// 切换聊天面板（控制底部聊天面板）
+function toggleChatPanel() {
+    const panel = document.getElementById('chatPanel');
+    const chatBtn = document.querySelector('.bottom-btn:nth-child(2)');
+    const chatToggleBtn = document.getElementById('chatToggleBtn');
+    
+    if (panel.style.display === 'flex') {
+        panel.style.display = 'none';
+        chatToggleBtn.style.display = 'flex';
+        chatBtn.classList.remove('active');
+        if (activeBottomButton === 'chat') activeBottomButton = null;
+    } else {
+        panel.style.display = 'flex';
+        chatToggleBtn.style.display = 'none';
+        chatBtn.classList.add('active');
+        activeBottomButton = 'chat';
+        
+        // 聚焦输入框
+        setTimeout(() => {
+            const chatInput = document.getElementById('chatInput');
+            if (chatInput) chatInput.focus();
+        }, 100);
+    }
+    
+    // 关闭其他面板
+    collapseControlPanel();
+    hidePublishPanel();
+    updateOtherButtons(chatBtn);
+}
+
+
+
+// 隐藏发布气泡面板
+function hidePublishPanel() {
+    const publishPanel = document.getElementById('publishPanel');
+    const publishBtn = document.querySelector('.bottom-btn:nth-child(3)');
+    
+    publishPanel.style.display = 'none';
+    publishBtn.classList.remove('active');
+    if (activeBottomButton === 'publish') activeBottomButton = null;
+}
+
+// 从发布面板发布气泡
+function publishBubbleFromPanel() {
+    const title = document.getElementById('bubbleTitlePanel').value.trim();
+    const content = document.getElementById('bubbleContentPanel').value.trim();
+    
+    if (!title) {
+        showNetworkStatus("请输入气泡标题", 2000);
+        return;
+    }
+    
+    if (!currentUser) {
+        showNetworkStatus("请先登录", 2000);
+        return;
+    }
+    
+    // 使用当前选择的位置
+    const publishPosition = myPosition;
+    
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+            type: "publishBubble",
+            bubbleType: selectedBubbleType,
+            roomCode: selectedBubbleType === 'group' ? generateChatroomCode() : null,
+            title: title,
+            content: content,
+            lat: publishPosition.lat,
+            lng: publishPosition.lng,
+            duration: 3600,
+            activityTags: []
+        }));
+        
+        console.log("📤 从面板发布气泡:", {title, type: selectedBubbleType});
+        showNetworkStatus("气泡发布成功！", 2000);
+    }
+    
+    // 清空表单并关闭面板
+    document.getElementById('bubbleTitlePanel').value = '';
+    document.getElementById('bubbleContentPanel').value = '';
+    hidePublishPanel();
+}
+
+// 更新发布面板的位置显示
+function updatePublishPanelLocationDisplay() {
+    const element = document.getElementById('publishLocationTextPanel');
+    if (element && myPosition) {
+        const modeText = locationMode === 'gps' ? 'GPS定位' : '手动选择';
+        element.textContent = `📍 ${modeText} (${myPosition.lat.toFixed(4)}, ${myPosition.lng.toFixed(4)})`;
+    }
+}
+
+// 辅助函数：收起控制面板
+function collapseControlPanel() {
+    const panel = document.getElementById('controlPanel');
+    const mapContainer = document.getElementById('mapContainer');
+
+    panelCollapsed = true;
+    panel.classList.add('collapsed');
+    mapContainer.classList.add('full-width');
+    toggleBtn.textContent = '展开面板';
+    
+    // 更新底部按钮状态
+    const bubbleBtn = document.querySelector('.bottom-btn:nth-child(1)');
+    bubbleBtn.classList.remove('active');
+}
+
+// 辅助函数：关闭聊天面板
+function closeChatPanel() {
+    const panel = document.getElementById('chatPanel');
+    const chatToggleBtn = document.getElementById('chatToggleBtn');
+    const chatBtn = document.querySelector('.bottom-btn:nth-child(2)');
+    
+    panel.style.display = 'none';
+    chatToggleBtn.style.display = 'flex';
+    chatBtn.classList.remove('active');
+}
+
+// 辅助函数：更新其他按钮状态
+function updateOtherButtons(activeButton) {
+    const buttons = document.querySelectorAll('.bottom-btn');
+    buttons.forEach(btn => {
+        if (btn !== activeButton) {
+            btn.classList.remove('active');
+        }
+    });
+}
+
+// 更新已有的位置更新函数
+function updatePublishLocationDisplay() {
+    const element = document.getElementById('publishLocationText');
+    if (element && myPosition) {
+        const modeText = locationMode === 'gps' ? 'GPS定位' : '手动选择';
+        element.textContent = `📍 ${modeText} (${myPosition.lat.toFixed(4)}, ${myPosition.lng.toFixed(4)})`;
+    }
+    
+    // 同时更新发布面板的位置显示
+    updatePublishPanelLocationDisplay();
+}
+
+// 修改现有的发布气泡表单函数
+function publishBubble() {
+    const title = document.getElementById('bubbleTitle').value.trim();
+    const content = document.getElementById('bubbleContent').value.trim();
+    
+    if (!title) {
+        showNetworkStatus("请输入气泡标题", 2000);
+        return;
+    }
+    
+    if (!currentUser) {
+        showNetworkStatus("请先登录", 2000);
+        return;
+    }
+    
+    // 使用当前选择的位置
+    const publishPosition = myPosition;
+    
+    // ⭐ 关键：生成房间代码
+    const roomCode = selectedBubbleType === 'group' ? generateChatroomCode() : null;
+    
+    console.log("📤 发布建群气泡，房间代码:", roomCode);
+    
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+            type: "publishBubble",
+            bubbleType: selectedBubbleType,
+            roomCode: roomCode,  // ⭐ 发送房间代码
+            title: title,
+            content: content,
+            lat: publishPosition.lat,
+            lng: publishPosition.lng,
+            duration: 3600,
+            activityTags: []
+        }));
+        
+        console.log("📤 发送气泡(publishBubble):", {title, type: selectedBubbleType, roomCode});
+        showNetworkStatus(`气泡发布成功${roomCode ? '，房间代码: ' + roomCode : ''}！`, 3000);
+    }
+    
+    // 清空表单
+    document.getElementById('bubbleTitle').value = '';
+    document.getElementById('bubbleContent').value = '';
+}
+
+
+    // 页面关闭时清理
+    window.onbeforeunload = function() {
+        stopAutoRefresh();
+        if (socket) socket.close();
+    };
+
+
+
+// ==================== 页面加载时初始化 ====================
+
+</script>
+
+    <!-- 在chat-panel之后，底部栏之前添加发布气泡面板 -->
+<div class="publish-panel" id="publishPanel">
+    <div class="publish-panel-header">
+        <span>➕ 发布新气泡</span>
+        <button onclick="hidePublishPanel()" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;">×</button>
+    </div>
+    <div class="publish-panel-content">
+        <div class="bubble-types">
+            <button class="bubble-type-btn" data-type="recommend" onclick="selectBubbleType('recommend')">👍 推荐</button>
+            <button class="bubble-type-btn" data-type="help" onclick="selectBubbleType('help')">🆘 求助</button>
+            <button class="bubble-type-btn" data-type="team" onclick="selectBubbleType('team')">👥 组队</button>
+            <button class="bubble-type-btn" data-type="group" onclick="selectBubbleType('group')">💬 建群</button>
+            <button class="bubble-type-btn" data-type="warning" onclick="selectBubbleType('warning')">避雷</button>
+            <button class="bubble-type-btn" data-type="news" onclick="selectBubbleType('news')">见闻</button>
+        </div>
+        <input type="text" id="bubbleTitlePanel" placeholder="气泡标题" style="margin-top: 15px;">
+        <textarea id="bubbleContentPanel" placeholder="气泡内容（可选）" style="margin-top: 10px; min-height: 100px;"></textarea>
+        <div style="margin: 12px 0; font-size: 13px; color: #052659;">
+            发布位置: <span id="publishLocationTextPanel">📍 使用当前位置</span>
+        </div>
+        <button class="publish-btn" onclick="publishBubbleFromPanel()" style="margin-top: 10px;">发布气泡</button>
+    </div>
+</div>
+<!-- 修改底部栏按钮的onclick事件 -->
+<div class="bottom-bar">
+    <button class="bottom-btn" onclick="toggleBubbleListPanel()">
+        🫧
+    </button>
+    <button class="bottom-btn" onclick="toggleChatPanel()">
+        💬
+    </button>
+
+    <!-- 聊天室代码输入区域保持不变 -->
+    <div style="display: flex; align-items: center; gap: 8px; margin-left: 15px; padding: 0 10px;">
+        <span style="font-size: 12px; color: rgba(255,255,255,0.9);">聊天室:</span>
+        <input type="text" 
+               id="chatroomCodeInput" 
+               value="000000"
+               maxlength="6"
+               placeholder="000000"
+               style="width: 65px; 
+                      padding: 6px 8px; 
+                      border-radius: 6px; 
+                      border: 1px solid rgba(255,255,255,0.3); 
+                      background: rgba(255,255,255,0.15); 
+                      color: white; 
+                      text-align: center;
+                      font-size: 12px;
+                      outline: none;"
+               onchange="updateChatroomCode()"
+               onkeypress="if(event.key === 'Enter') updateChatroomCode()">
+        <button class="bottom-btn" 
+                onclick="resetChatroomCode()" 
+                style="padding: 6px 10px; background: rgba(255,255,255,0.2); font-size: 12px;">
+            公屏
+        </button>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,27 @@
+{
+  "name": "moment-map-auth-system",
+  "version": "9.2.1",
+  "description": "此刻地图 - 社交地图应用（含用户认证系统）",
+  "main": "server0211.js",
+  "scripts": {
+    "start": "node server0211.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "websocket",
+    "map",
+    "social",
+    "chat",
+    "bubble",
+    "authentication"
+  ],
+  "author": "MomentMap Team",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.14.2",
+    "sqlite3": "^5.1.6"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
